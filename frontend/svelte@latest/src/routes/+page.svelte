@@ -1,38 +1,145 @@
 <script lang="ts">
-    const categories = ['Phones', 'Laptops', 'Monitors', 'Components', 'Smartwatches'];
+    import { scale, fade, slide } from 'svelte/transition';
+    import { onMount, onDestroy } from 'svelte';
+
+    const categories = [
+        'Phones',
+        'Laptops',
+        'Monitors',
+        'Components',
+        'Smartwatches',
+        'Tablets',
+        'Headphones',
+        'Keyboards',
+        'Mice',
+        'Printers',
+        'Networking',
+        'Storage',
+        'Cameras',
+        'Drones',
+        'Wearables'
+    ];
+
     const deals = [
         {
+            id: 's24',
             title: 'Samsung Galaxy S24',
             price: '799€',
             store: 'Verkkokauppa',
-            image: 'https://via.placeholder.com/150'
+            image: '/bg.svg',
+            category: 'Phones',
+            description: 'The Samsung Galaxy S24 features a stunning 6.2-inch Dynamic AMOLED display, triple-lens camera system, and the latest Snapdragon processor for blazing-fast performance. Enjoy all-day battery life and 5G connectivity in a sleek, modern design.'
         },
         {
+            id: 'mba-m2',
             title: 'Apple MacBook Air M2',
             price: '1199€',
             store: 'Gigantti',
-            image: 'https://via.placeholder.com/150'
+            image: '/bg.svg',
+            category: 'Laptops',
+            description: 'Apple’s MacBook Air M2 delivers incredible speed and efficiency with the new Apple M2 chip. The ultra-thin, lightweight design features a 13.6-inch Liquid Retina display, Magic Keyboard, and up to 18 hours of battery life—perfect for work or play on the go.'
         },
         {
+            id: 'lg-ug27',
             title: 'LG UltraGear 27"',
             price: '299€',
             store: 'Power',
-            image: 'https://via.placeholder.com/150'
+            image: '/bg.svg',
+            category: 'Monitors',
+            description: 'The LG UltraGear 27" gaming monitor offers a 144Hz refresh rate, 1ms response time, and vibrant IPS panel for smooth, immersive gameplay. G-SYNC compatibility ensures tear-free visuals, while the ergonomic stand provides optimal viewing comfort.'
         },
         {
+            id: 'kingston-1tb',
             title: 'Kingston 1TB SSD',
             price: '69€',
             store: 'Jimms',
-            image: 'https://via.placeholder.com/150'
+            image: '/bg.svg',
+            category: 'Storage',
+            description: 'Upgrade your storage with the Kingston 1TB SSD. Enjoy lightning-fast read and write speeds, enhanced reliability, and silent operation. Ideal for laptops and desktops, this SSD ensures quick boot times and rapid file transfers.'
+        },
+        {
+            id: 'apple-watch',
+            title: 'Apple Watch Series 9',
+            price: '399€',
+            store: 'Apple Store',
+            image: '/bg.svg',
+            category: 'Smartwatches',
+            description: 'Stay connected and track your health with the Apple Watch Series 9. Featuring advanced fitness tracking, ECG, blood oxygen monitoring, and seamless integration with your iPhone, it’s the ultimate companion for an active lifestyle.'
+        },
+        {
+            id: 'ipad-pro',
+            title: 'iPad Pro 11"',
+            price: '999€',
+            store: 'Verkkokauppa',
+            image: '/bg.svg',
+            category: 'Tablets',
+            description: 'The iPad Pro 11" combines the power of the M2 chip with a stunning Liquid Retina display. Perfect for creative professionals and multitaskers, it supports the Apple Pencil and Magic Keyboard for a versatile, laptop-like experience.'
+        },
+        {
+            id: 'sony-wh1000xm5',
+            title: 'Sony WH-1000XM5',
+            price: '349€',
+            store: 'Power',
+            image: '/bg.svg',
+            category: 'Headphones',
+            description: 'Experience industry-leading noise cancellation and superior sound quality with the Sony WH-1000XM5 headphones. Enjoy up to 30 hours of battery life, touch controls, and a comfortable, lightweight design for all-day listening.'
+        },
+        {
+            id: 'logitech-g915',
+            title: 'Logitech G915 Keyboard',
+            price: '199€',
+            store: 'Gigantti',
+            image: '/bg.svg',
+            category: 'Keyboards',
+            description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
         }
     ];
 
     let gridRef: HTMLDivElement | null = null;
     let search = '';
 
+    type Deal = {
+        id: string;
+        title: string;
+        price: string;
+        description?: string;
+        store: string;
+        image: string;
+    };
+
+    let selectedProduct: Deal | null = null;
+    let selectedCategory: string | null = null;
+    let showSubHeader = false;
+
     function scrollToGrid() {
         gridRef?.scrollIntoView({ behavior: 'smooth' });
     }
+
+    function openProduct(product: Deal) {
+        selectedProduct = product;
+    }
+    function closeModal() {
+        selectedProduct = null;
+    }
+
+    function handleScroll() {
+        if (!gridRef) return;
+        const rect = gridRef.getBoundingClientRect();
+        // Show sub-header if grid is at or above the top of the viewport
+        showSubHeader = rect.top <= 200; // 64px = header height
+    }
+
+    onMount(() => {
+        if (typeof window !== 'undefined') {
+            window.addEventListener('scroll', handleScroll);
+            handleScroll();
+        }
+    });
+    onDestroy(() => {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('scroll', handleScroll);
+        }
+    });
 </script>
 
 <style>
@@ -40,29 +147,141 @@
         0%, 100% { transform: translateY(0);}
         50% { transform: translateY(10px);}
     }
-    /* Remove .svg-container and .big-svg styles, use Tailwind for sizing */
     img.hero-svg {
       width: 40vw;
       height: 40vh;
       object-fit: contain;
       display: block;
     }
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 50;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        max-width: 600px;
+        width: 90%;
+        display: flex;
+        flex-direction: row;
+        gap: 2rem;
+        position: relative;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 1.5px 6px rgba(0,0,0,0.12);
+    }
+    .modal-image {
+        width: 180px;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 1rem;
+        flex-shrink: 0;
+        background: #f3f3f3;
+    }
+    .modal-details {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex: 1;
+        min-width: 0;
+    }
+    .modal-details h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .modal-details .price {
+        color: #2563eb;
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .modal-details .store {
+        color: #888;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+    .close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: transparent;
+        border: none;
+        font-size: 2rem;
+        color: #888;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .close-btn:hover {
+        color: #e53e3e;
+    }
+
+    /* New styles for the header and sub-header */
+    header {
+        height: 64px;
+    }
+    .sub-header {
+        height: 32px;
+    }
+
+    button.opacity-60 {
+        opacity: 0.6;
+        pointer-events: none;
+    }
 </style>
 
 <!-- Gradient background for the whole page -->
 <div class="min-h-screen w-full" style="background: linear-gradient(90deg, #e0e7ff 0%, #f0fdfa 100%);">
 
-    <!-- Header with logo, px-6 for padding -->
-    <header class="fixed top-0 left-0 z-50 px-6 py-4 bg-white shadow w-full">
+    <!-- Main Header -->
+    <header class="fixed top-0 left-0 z-50 px-6 py-4 bg-white shadow w-full flex items-center">
         <div class="text-2xl font-extrabold text-blue-700 tracking-tight select-none">CloudBridge</div>
     </header>
+
+    <!-- Sub-header with categories -->
+    
+
+    <!-- Sub-header visible only when scrolling down -->
+    {#if showSubHeader}
+        <div transition:slide class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:32px;">
+            <nav class="flex gap-2 flex-wrap justify-center w-full">
+                {#each categories as category}
+                    <button
+                        class="px-3 py-1 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+                        class:opacity-60={selectedCategory === category}
+                        class:font-semibold={selectedCategory === category}
+                        on:click={() => {
+                            selectedCategory = category;
+                            scrollToGrid();
+                        }}
+                    >
+                        {category}
+                    </button>
+                {/each}
+                <button
+                    class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                    on:click={() => {
+                        selectedCategory = null;
+                        scrollToGrid();
+                    }}
+                >
+                    Show All Deals
+                </button>
+            </nav>
+        </div>
+    {/if}
 
     <!-- Main content centered, px-6 for padding, pt-20 for header space -->
     <div class="max-w-8xl mx-auto px-6 py-8 min-h-screen flex flex-col justify-between pt-20">
         <div class="flex flex-col md:flex-row items-start md:items-center">
             <!-- Left: Text content -->
-            <div class="flex-1 px-6 py-30">
-                <h1 class="text-6xl font-bold text-left mb-2">Finland's Best Tech Deals</h1>
+            <div class="flex-1 px-6 py-20">
+                <h1 class="text-5xl font-bold text-left mb-2">Finland's Best Tech Deals</h1>
                 <p class="text-left text-gray-600 mb-20">Find the hottest electronics deals – all in one place!</p>
 
                 <!-- Search section -->
@@ -83,11 +302,26 @@
                     {#each categories as category}
                         <button
                             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                            on:click={scrollToGrid}
+                            class:selected={selectedCategory === category}
+                            on:click={() => {
+                                selectedCategory = category;
+                                scrollToGrid();
+                            }}
                         >
                             {category}
                         </button>
                     {/each}
+                    {#if selectedCategory}
+                        <button
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+                            on:click={() => {
+                                selectedCategory = null;
+                                scrollToGrid();
+                            }}
+                        >
+                            Show All
+                        </button>
+                    {/if}
                 </div>
             </div>
 
@@ -99,30 +333,65 @@
 
         <!-- Animated "browse for latest deals" text with arrow" at the bottom and centered -->
         <div class="flex-1 flex flex-col justify-end">
-            <div class="flex flex-col items-center mb-8 cursor-pointer select-none" on:click={scrollToGrid}>
+            <button
+                type="button"
+                class="flex flex-col items-center mb-8 cursor-pointer select-none bg-transparent border-none focus:outline-none"
+                on:click={scrollToGrid}
+                aria-label="Browse for latest deals"
+            >
                 <span class="text-lg font-semibold animate-pulse">Browse for latest deals</span>
-                <svg class="w-8 h-8 mt-2 text-blue-600" style="animation: bounce 1.2s infinite;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-blue-600" style="animation: bounce 1.2s infinite;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                 </svg>
-            </div>
+            </button>
         </div>
     </div>
 
     <!-- Deals grid, initially below the fold -->
-    <div bind:this={gridRef} class="max-w-5xl mx-auto px-6 py-30 min-h-screen">
+    <div bind:this={gridRef} class="max-w-5xl mx-auto px-6 py-8 min-h-[80vh]" style="scroll-margin-top: 200px;"> 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {#each deals as deal}
-                <div class="bg-white rounded shadow p-4 flex flex-col items-center">
+            {#each deals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
+                <a href={`/product/${deal.id}`} class="bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer" on:click|preventDefault={() => openProduct(deal)}>
                     <img src={deal.image} alt={deal.title} class="w-24 h-24 object-cover mb-3 rounded" />
                     <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
                     <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
                     <p class="text-gray-500 text-sm">{deal.store}</p>
-                </div>
+                </a>
             {/each}
         </div>
     </div>
 
-   
+    {#if selectedProduct}
+        <div
+            class="modal-backdrop"
+            role="button"
+            tabindex="0"
+            aria-label="Close modal"
+            on:click={closeModal}
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+        >
+            <div
+                class="modal-content"
+                role="dialog"
+                aria-modal="true"
+                tabindex="0"
+                on:click|stopPropagation
+                on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+                transition:scale={{ duration: 250, start: 0.8 }}
+            >
+                <img class="modal-image" src={selectedProduct.image} alt={selectedProduct.title} />
+                <div class="modal-details">
+                    <h1>{selectedProduct.title}</h1>
+                    <p class="price">{selectedProduct.price}</p>
+                    {#if selectedProduct.description}
+                        <p>{selectedProduct.description}</p>
+                    {/if}
+                    <p class="store">{selectedProduct.store}</p>
+                    <button class="close-btn" on:click={closeModal}>×</button>
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>
 
 
