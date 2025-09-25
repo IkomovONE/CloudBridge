@@ -92,6 +92,150 @@
             image: '/bg.svg',
             category: 'Keyboards',
             description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
+        },
+        {
+            id: 's24',
+            title: 'Samsung Galaxy S24',
+            price: '799€',
+            store: 'Verkkokauppa',
+            image: '/bg.svg',
+            category: 'Phones',
+            description: 'The Samsung Galaxy S24 features a stunning 6.2-inch Dynamic AMOLED display, triple-lens camera system, and the latest Snapdragon processor for blazing-fast performance. Enjoy all-day battery life and 5G connectivity in a sleek, modern design.'
+        },
+        {
+            id: 'mba-m2',
+            title: 'Apple MacBook Air M2',
+            price: '1199€',
+            store: 'Gigantti',
+            image: '/bg.svg',
+            category: 'Laptops',
+            description: 'Apple’s MacBook Air M2 delivers incredible speed and efficiency with the new Apple M2 chip. The ultra-thin, lightweight design features a 13.6-inch Liquid Retina display, Magic Keyboard, and up to 18 hours of battery life—perfect for work or play on the go.'
+        },
+        {
+            id: 'lg-ug27',
+            title: 'LG UltraGear 27"',
+            price: '299€',
+            store: 'Power',
+            image: '/bg.svg',
+            category: 'Monitors',
+            description: 'The LG UltraGear 27" gaming monitor offers a 144Hz refresh rate, 1ms response time, and vibrant IPS panel for smooth, immersive gameplay. G-SYNC compatibility ensures tear-free visuals, while the ergonomic stand provides optimal viewing comfort.'
+        },
+        {
+            id: 'kingston-1tb',
+            title: 'Kingston 1TB SSD',
+            price: '69€',
+            store: 'Jimms',
+            image: '/bg.svg',
+            category: 'Storage',
+            description: 'Upgrade your storage with the Kingston 1TB SSD. Enjoy lightning-fast read and write speeds, enhanced reliability, and silent operation. Ideal for laptops and desktops, this SSD ensures quick boot times and rapid file transfers.'
+        },
+        {
+            id: 'apple-watch',
+            title: 'Apple Watch Series 9',
+            price: '399€',
+            store: 'Apple Store',
+            image: '/bg.svg',
+            category: 'Smartwatches',
+            description: 'Stay connected and track your health with the Apple Watch Series 9. Featuring advanced fitness tracking, ECG, blood oxygen monitoring, and seamless integration with your iPhone, it’s the ultimate companion for an active lifestyle.'
+        },
+        {
+            id: 'ipad-pro',
+            title: 'iPad Pro 11"',
+            price: '999€',
+            store: 'Verkkokauppa',
+            image: '/bg.svg',
+            category: 'Tablets',
+            description: 'The iPad Pro 11" combines the power of the M2 chip with a stunning Liquid Retina display. Perfect for creative professionals and multitaskers, it supports the Apple Pencil and Magic Keyboard for a versatile, laptop-like experience.'
+        },
+        {
+            id: 'sony-wh1000xm5',
+            title: 'Sony WH-1000XM5',
+            price: '349€',
+            store: 'Power',
+            image: '/bg.svg',
+            category: 'Headphones',
+            description: 'Experience industry-leading noise cancellation and superior sound quality with the Sony WH-1000XM5 headphones. Enjoy up to 30 hours of battery life, touch controls, and a comfortable, lightweight design for all-day listening.'
+        },
+        {
+            id: 'logitech-g915',
+            title: 'Logitech G915 Keyboard',
+            price: '199€',
+            store: 'Gigantti',
+            image: '/bg.svg',
+            category: 'Keyboards',
+            description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
+        },
+        {
+            id: 's24',
+            title: 'Samsung Galaxy S24',
+            price: '799€',
+            store: 'Verkkokauppa',
+            image: '/bg.svg',
+            category: 'Phones',
+            description: 'The Samsung Galaxy S24 features a stunning 6.2-inch Dynamic AMOLED display, triple-lens camera system, and the latest Snapdragon processor for blazing-fast performance. Enjoy all-day battery life and 5G connectivity in a sleek, modern design.'
+        },
+        {
+            id: 'mba-m2',
+            title: 'Apple MacBook Air M2',
+            price: '1199€',
+            store: 'Gigantti',
+            image: '/bg.svg',
+            category: 'Laptops',
+            description: 'Apple’s MacBook Air M2 delivers incredible speed and efficiency with the new Apple M2 chip. The ultra-thin, lightweight design features a 13.6-inch Liquid Retina display, Magic Keyboard, and up to 18 hours of battery life—perfect for work or play on the go.'
+        },
+        {
+            id: 'lg-ug27',
+            title: 'LG UltraGear 27"',
+            price: '299€',
+            store: 'Power',
+            image: '/bg.svg',
+            category: 'Monitors',
+            description: 'The LG UltraGear 27" gaming monitor offers a 144Hz refresh rate, 1ms response time, and vibrant IPS panel for smooth, immersive gameplay. G-SYNC compatibility ensures tear-free visuals, while the ergonomic stand provides optimal viewing comfort.'
+        },
+        {
+            id: 'kingston-1tb',
+            title: 'Kingston 1TB SSD',
+            price: '69€',
+            store: 'Jimms',
+            image: '/bg.svg',
+            category: 'Storage',
+            description: 'Upgrade your storage with the Kingston 1TB SSD. Enjoy lightning-fast read and write speeds, enhanced reliability, and silent operation. Ideal for laptops and desktops, this SSD ensures quick boot times and rapid file transfers.'
+        },
+        {
+            id: 'apple-watch',
+            title: 'Apple Watch Series 9',
+            price: '399€',
+            store: 'Apple Store',
+            image: '/bg.svg',
+            category: 'Smartwatches',
+            description: 'Stay connected and track your health with the Apple Watch Series 9. Featuring advanced fitness tracking, ECG, blood oxygen monitoring, and seamless integration with your iPhone, it’s the ultimate companion for an active lifestyle.'
+        },
+        {
+            id: 'ipad-pro',
+            title: 'iPad Pro 11"',
+            price: '999€',
+            store: 'Verkkokauppa',
+            image: '/bg.svg',
+            category: 'Tablets',
+            description: 'The iPad Pro 11" combines the power of the M2 chip with a stunning Liquid Retina display. Perfect for creative professionals and multitaskers, it supports the Apple Pencil and Magic Keyboard for a versatile, laptop-like experience.'
+        },
+        {
+            id: 'sony-wh1000xm5',
+            title: 'Sony WH-1000XM5',
+            price: '349€',
+            store: 'Power',
+            image: '/bg.svg',
+            category: 'Headphones',
+            description: 'Experience industry-leading noise cancellation and superior sound quality with the Sony WH-1000XM5 headphones. Enjoy up to 30 hours of battery life, touch controls, and a comfortable, lightweight design for all-day listening.'
+        },
+        {
+            id: 'logitech-g915',
+            title: 'Logitech G915 Keyboard',
+            price: '199€',
+            store: 'Gigantti',
+            image: '/bg.svg',
+            category: 'Keyboards',
+            description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
         }
     ];
 
@@ -108,8 +252,14 @@
     };
 
     let selectedProduct: Deal | null = null;
+    let accountCardSelected: boolean | null = null;
     let selectedCategory: string | null = null;
     let showSubHeader = false;
+
+    let accountMode: 'login' | 'register' = 'login';
+    let email = '';
+    let password = '';
+    let passwordRepeat = '';
 
     function scrollToGrid() {
         gridRef?.scrollIntoView({ behavior: 'smooth' });
@@ -118,6 +268,8 @@
     function openProduct(product: Deal) {
         selectedProduct = product;
     }
+
+    
     function closeModal() {
         selectedProduct = null;
     }
@@ -233,6 +385,18 @@
         opacity: 0.6;
         pointer-events: none;
     }
+
+    .account-switch button {
+        transition: background 0.2s, color 0.2s;
+    }
+    .account-switch button.bg-blue-600 {
+        background: #2563eb !important;
+        color: #fff !important;
+    }
+    .account-switch button.bg-blue-100 {
+        background: #e0e7ff !important;
+        color: #2563eb !important;
+    }
 </style>
 
 <!-- Gradient background for the whole page -->
@@ -241,6 +405,31 @@
     <!-- Main Header -->
     <header class="fixed top-0 left-0 z-50 px-6 py-4 bg-white shadow w-full flex items-center">
         <div class="text-2xl font-extrabold text-blue-700 tracking-tight select-none">CloudBridge</div>
+
+        <button
+            class="px-3 py-1 fixed right-30 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+            
+            on:click={() => {
+                
+                scrollToGrid();
+            }}
+        >
+        ☆Favourites 
+        </button>
+
+        <p class="px-3 py-1 fixed right-24" style="font-size: large;">|</p>
+
+        <button
+            class="px-3 py-1 fixed right-5 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+            on:click={() => {
+                
+                accountCardSelected = true;
+            }}
+
+            
+        >
+        Account 
+        </button>
     </header>
 
     <!-- Sub-header with categories -->
@@ -270,7 +459,7 @@
                         scrollToGrid();
                     }}
                 >
-                    Show All Deals
+                    Reset filter
                 </button>
             </nav>
         </div>
@@ -389,6 +578,81 @@
                     <p class="store">{selectedProduct.store}</p>
                     <button class="close-btn" on:click={closeModal}>×</button>
                 </div>
+            </div>
+        </div>
+    {/if}
+
+    {#if accountCardSelected}
+        <div
+            class="modal-backdrop"
+            role="button"
+            tabindex="0"
+            aria-label="Close modal"
+            on:click={closeModal}
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+        >
+            <div
+                class="modal-content"
+                role="dialog"
+                aria-modal="true"
+                tabindex="0"
+                on:click|stopPropagation
+                on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+                transition:scale={{ duration: 250, start: 0.8 }}
+                style="max-width: 400px; flex-direction: column; align-items: stretch;"
+            >
+                <div class="account-switch flex justify-center mb-4 gap-2">
+                    <button
+                        class="px-3 py-1 rounded-t bg-blue-600 text-white font-semibold"
+                        class:bg-blue-600={accountMode === 'login'}
+                        class:bg-blue-100={accountMode !== 'login'}
+                        class:text-blue-700={accountMode !== 'login'}
+                        on:click={() => accountMode = 'login'}
+                    >
+                        Login
+                    </button>
+                    <button
+                        class="px-3 py-1 rounded-t font-semibold"
+                        class:bg-blue-600={accountMode === 'register'}
+                        class:bg-blue-100={accountMode !== 'register'}
+                        class:text-blue-700={accountMode !== 'register'}
+                        on:click={() => accountMode = 'register'}
+                    >
+                        Register
+                    </button>
+                </div>
+                <div class="modal-details" style="align-items: stretch;">
+                    <h1 class="mb-4 text-xl font-bold text-center">{accountMode === 'login' ? 'Login' : 'Register'}</h1>
+                    <label class="mb-2 text-sm font-medium">E-mail</label>
+                    <input
+                        class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                        type="email"
+                        bind:value={email}
+                        placeholder="Enter your e-mail"
+                    />
+                    <label class="mb-2 text-sm font-medium">Password</label>
+                    <input
+                        class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                        type="password"
+                        bind:value={password}
+                        placeholder="Enter your password"
+                    />
+                    {#if accountMode === 'register'}
+                        <label class="mb-2 text-sm font-medium">Repeat Password</label>
+                        <input
+                            class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                            type="password"
+                            bind:value={passwordRepeat}
+                            placeholder="Repeat your password"
+                        />
+                    {/if}
+                    <button
+                        class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                    >
+                        {accountMode === 'login' ? 'Login' : 'Register'}
+                    </button>
+                </div>
+                <button class="close-btn" on:click={() => {accountCardSelected = false}}>×</button>
             </div>
         </div>
     {/if}
