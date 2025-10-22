@@ -20,224 +20,35 @@
         'Wearables'
     ];
 
-    const deals = [
-        {
-            id: 's24',
-            title: 'Samsung Galaxy S24',
-            price: '799€',
-            store: 'Verkkokauppa',
-            image: '/bg.svg',
-            category: 'Phones',
-            description: 'The Samsung Galaxy S24 features a stunning 6.2-inch Dynamic AMOLED display, triple-lens camera system, and the latest Snapdragon processor for blazing-fast performance. Enjoy all-day battery life and 5G connectivity in a sleek, modern design.'
-        },
-        {
-            id: 'mba-m2',
-            title: 'Apple MacBook Air M2',
-            price: '1199€',
-            store: 'Gigantti',
-            image: '/bg.svg',
-            category: 'Laptops',
-            description: 'Apple’s MacBook Air M2 delivers incredible speed and efficiency with the new Apple M2 chip. The ultra-thin, lightweight design features a 13.6-inch Liquid Retina display, Magic Keyboard, and up to 18 hours of battery life—perfect for work or play on the go.'
-        },
-        {
-            id: 'lg-ug27',
-            title: 'LG UltraGear 27"',
-            price: '299€',
-            store: 'Power',
-            image: '/bg.svg',
-            category: 'Monitors',
-            description: 'The LG UltraGear 27" gaming monitor offers a 144Hz refresh rate, 1ms response time, and vibrant IPS panel for smooth, immersive gameplay. G-SYNC compatibility ensures tear-free visuals, while the ergonomic stand provides optimal viewing comfort.'
-        },
-        {
-            id: 'kingston-1tb',
-            title: 'Kingston 1TB SSD',
-            price: '69€',
-            store: 'Jimms',
-            image: '/bg.svg',
-            category: 'Storage',
-            description: 'Upgrade your storage with the Kingston 1TB SSD. Enjoy lightning-fast read and write speeds, enhanced reliability, and silent operation. Ideal for laptops and desktops, this SSD ensures quick boot times and rapid file transfers.'
-        },
-        {
-            id: 'apple-watch',
-            title: 'Apple Watch Series 9',
-            price: '399€',
-            store: 'Apple Store',
-            image: '/bg.svg',
-            category: 'Smartwatches',
-            description: 'Stay connected and track your health with the Apple Watch Series 9. Featuring advanced fitness tracking, ECG, blood oxygen monitoring, and seamless integration with your iPhone, it’s the ultimate companion for an active lifestyle.'
-        },
-        {
-            id: 'ipad-pro',
-            title: 'iPad Pro 11"',
-            price: '999€',
-            store: 'Verkkokauppa',
-            image: '/bg.svg',
-            category: 'Tablets',
-            description: 'The iPad Pro 11" combines the power of the M2 chip with a stunning Liquid Retina display. Perfect for creative professionals and multitaskers, it supports the Apple Pencil and Magic Keyboard for a versatile, laptop-like experience.'
-        },
-        {
-            id: 'sony-wh1000xm5',
-            title: 'Sony WH-1000XM5',
-            price: '349€',
-            store: 'Power',
-            image: '/bg.svg',
-            category: 'Headphones',
-            description: 'Experience industry-leading noise cancellation and superior sound quality with the Sony WH-1000XM5 headphones. Enjoy up to 30 hours of battery life, touch controls, and a comfortable, lightweight design for all-day listening.'
-        },
-        {
-            id: 'logitech-g915',
-            title: 'Logitech G915 Keyboard',
-            price: '199€',
-            store: 'Gigantti',
-            image: '/bg.svg',
-            category: 'Keyboards',
-            description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
-        },
-        {
-            id: 's24',
-            title: 'Samsung Galaxy S24',
-            price: '799€',
-            store: 'Verkkokauppa',
-            image: '/bg.svg',
-            category: 'Phones',
-            description: 'The Samsung Galaxy S24 features a stunning 6.2-inch Dynamic AMOLED display, triple-lens camera system, and the latest Snapdragon processor for blazing-fast performance. Enjoy all-day battery life and 5G connectivity in a sleek, modern design.'
-        },
-        {
-            id: 'mba-m2',
-            title: 'Apple MacBook Air M2',
-            price: '1199€',
-            store: 'Gigantti',
-            image: '/bg.svg',
-            category: 'Laptops',
-            description: 'Apple’s MacBook Air M2 delivers incredible speed and efficiency with the new Apple M2 chip. The ultra-thin, lightweight design features a 13.6-inch Liquid Retina display, Magic Keyboard, and up to 18 hours of battery life—perfect for work or play on the go.'
-        },
-        {
-            id: 'lg-ug27',
-            title: 'LG UltraGear 27"',
-            price: '299€',
-            store: 'Power',
-            image: '/bg.svg',
-            category: 'Monitors',
-            description: 'The LG UltraGear 27" gaming monitor offers a 144Hz refresh rate, 1ms response time, and vibrant IPS panel for smooth, immersive gameplay. G-SYNC compatibility ensures tear-free visuals, while the ergonomic stand provides optimal viewing comfort.'
-        },
-        {
-            id: 'kingston-1tb',
-            title: 'Kingston 1TB SSD',
-            price: '69€',
-            store: 'Jimms',
-            image: '/bg.svg',
-            category: 'Storage',
-            description: 'Upgrade your storage with the Kingston 1TB SSD. Enjoy lightning-fast read and write speeds, enhanced reliability, and silent operation. Ideal for laptops and desktops, this SSD ensures quick boot times and rapid file transfers.'
-        },
-        {
-            id: 'apple-watch',
-            title: 'Apple Watch Series 9',
-            price: '399€',
-            store: 'Apple Store',
-            image: '/bg.svg',
-            category: 'Smartwatches',
-            description: 'Stay connected and track your health with the Apple Watch Series 9. Featuring advanced fitness tracking, ECG, blood oxygen monitoring, and seamless integration with your iPhone, it’s the ultimate companion for an active lifestyle.'
-        },
-        {
-            id: 'ipad-pro',
-            title: 'iPad Pro 11"',
-            price: '999€',
-            store: 'Verkkokauppa',
-            image: '/bg.svg',
-            category: 'Tablets',
-            description: 'The iPad Pro 11" combines the power of the M2 chip with a stunning Liquid Retina display. Perfect for creative professionals and multitaskers, it supports the Apple Pencil and Magic Keyboard for a versatile, laptop-like experience.'
-        },
-        {
-            id: 'sony-wh1000xm5',
-            title: 'Sony WH-1000XM5',
-            price: '349€',
-            store: 'Power',
-            image: '/bg.svg',
-            category: 'Headphones',
-            description: 'Experience industry-leading noise cancellation and superior sound quality with the Sony WH-1000XM5 headphones. Enjoy up to 30 hours of battery life, touch controls, and a comfortable, lightweight design for all-day listening.'
-        },
-        {
-            id: 'logitech-g915',
-            title: 'Logitech G915 Keyboard',
-            price: '199€',
-            store: 'Gigantti',
-            image: '/bg.svg',
-            category: 'Keyboards',
-            description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
-        },
-        {
-            id: 's24',
-            title: 'Samsung Galaxy S24',
-            price: '799€',
-            store: 'Verkkokauppa',
-            image: '/bg.svg',
-            category: 'Phones',
-            description: 'The Samsung Galaxy S24 features a stunning 6.2-inch Dynamic AMOLED display, triple-lens camera system, and the latest Snapdragon processor for blazing-fast performance. Enjoy all-day battery life and 5G connectivity in a sleek, modern design.'
-        },
-        {
-            id: 'mba-m2',
-            title: 'Apple MacBook Air M2',
-            price: '1199€',
-            store: 'Gigantti',
-            image: '/bg.svg',
-            category: 'Laptops',
-            description: 'Apple’s MacBook Air M2 delivers incredible speed and efficiency with the new Apple M2 chip. The ultra-thin, lightweight design features a 13.6-inch Liquid Retina display, Magic Keyboard, and up to 18 hours of battery life—perfect for work or play on the go.'
-        },
-        {
-            id: 'lg-ug27',
-            title: 'LG UltraGear 27"',
-            price: '299€',
-            store: 'Power',
-            image: '/bg.svg',
-            category: 'Monitors',
-            description: 'The LG UltraGear 27" gaming monitor offers a 144Hz refresh rate, 1ms response time, and vibrant IPS panel for smooth, immersive gameplay. G-SYNC compatibility ensures tear-free visuals, while the ergonomic stand provides optimal viewing comfort.'
-        },
-        {
-            id: 'kingston-1tb',
-            title: 'Kingston 1TB SSD',
-            price: '69€',
-            store: 'Jimms',
-            image: '/bg.svg',
-            category: 'Storage',
-            description: 'Upgrade your storage with the Kingston 1TB SSD. Enjoy lightning-fast read and write speeds, enhanced reliability, and silent operation. Ideal for laptops and desktops, this SSD ensures quick boot times and rapid file transfers.'
-        },
-        {
-            id: 'apple-watch',
-            title: 'Apple Watch Series 9',
-            price: '399€',
-            store: 'Apple Store',
-            image: '/bg.svg',
-            category: 'Smartwatches',
-            description: 'Stay connected and track your health with the Apple Watch Series 9. Featuring advanced fitness tracking, ECG, blood oxygen monitoring, and seamless integration with your iPhone, it’s the ultimate companion for an active lifestyle.'
-        },
-        {
-            id: 'ipad-pro',
-            title: 'iPad Pro 11"',
-            price: '999€',
-            store: 'Verkkokauppa',
-            image: '/bg.svg',
-            category: 'Tablets',
-            description: 'The iPad Pro 11" combines the power of the M2 chip with a stunning Liquid Retina display. Perfect for creative professionals and multitaskers, it supports the Apple Pencil and Magic Keyboard for a versatile, laptop-like experience.'
-        },
-        {
-            id: 'sony-wh1000xm5',
-            title: 'Sony WH-1000XM5',
-            price: '349€',
-            store: 'Power',
-            image: '/bg.svg',
-            category: 'Headphones',
-            description: 'Experience industry-leading noise cancellation and superior sound quality with the Sony WH-1000XM5 headphones. Enjoy up to 30 hours of battery life, touch controls, and a comfortable, lightweight design for all-day listening.'
-        },
-        {
-            id: 'logitech-g915',
-            title: 'Logitech G915 Keyboard',
-            price: '199€',
-            store: 'Gigantti',
-            image: '/bg.svg',
-            category: 'Keyboards',
-            description: 'The Logitech G915 is a premium wireless mechanical gaming keyboard featuring low-profile GL switches, customizable RGB lighting, and ultra-fast LIGHTSPEED wireless technology. Its sleek, durable aluminum design is perfect for serious gamers.'
+    // products will be fetched from backend
+    let deals: Deal[] = [];
+    let loading = false;
+    let loadError: string | null = null;
+
+    async function loadProducts() {
+        loading = true;
+        loadError = null;
+        try {
+            const res = await fetch('http://localhost:8080/products');
+            if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+            const data = await res.json();
+            // map backend objects to Deal shape defensively
+            deals = (Array.isArray(data) ? data : []).map((item: any) => ({
+                id: item.id ?? item.ID ?? '',
+                title: item.title ?? item.name ?? '',
+                price: typeof item.price === 'number' ? String(item.price) : (item.price ?? ''),
+                store: item.store ?? '',
+                image: item.image ?? '/bg.svg',
+                category: item.category ?? '',
+                description: item.description ?? ''
+            }));
+        } catch (err: any) {
+            loadError = err?.message ?? 'Failed to load products';
+            console.error('loadProducts error', err);
+        } finally {
+            loading = false;
         }
-    ];
+    }
 
     let gridRef: HTMLDivElement | null = null;
     let search = '';
@@ -282,6 +93,8 @@
     }
 
     onMount(() => {
+        // fetch products and attach scroll listener in the browser
+        loadProducts();
         if (typeof window !== 'undefined') {
             window.addEventListener('scroll', handleScroll);
             handleScroll();
