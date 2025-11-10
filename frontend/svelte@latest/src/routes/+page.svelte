@@ -105,6 +105,49 @@
             window.removeEventListener('scroll', handleScroll);
         }
     });
+
+    const S3_BASE = 'https://cloudbridge-pictures.s3.amazonaws.com/';
+
+    // build exactly 3 candidate URLs from backend base id like "iphone16"
+    function buildImageSlidesFromId(id?: string): string[] {
+        if (!id) return ['/bg.svg'];
+        const base = String(id).replace(/\.png$/i, '').replace(/_(\d+)$/i, '');
+        return [1, 2, 3].map(i => `${base}_${i}.png`);
+    }
+
+    // reactive slides derived from selectedProduct.image (which is a base id)
+    $: imageSlides = selectedProduct ? buildImageSlidesFromId(selectedProduct.image) : [];
+    $: if (selectedProduct) currentImageIndex = 0;
+
+    let currentImageIndex = 0;
+
+    function prevImage() {
+        if (!imageSlides.length) return;
+        currentImageIndex = (currentImageIndex + imageSlides.length - 1) % imageSlides.length;
+    }
+    function nextImage() {
+        if (!imageSlides.length) return;
+        currentImageIndex = (currentImageIndex + 1) % imageSlides.length;
+    }
+
+    // helper: build thumbnail URL from backend image field (backend returns base id like "iphone16")
+    function getThumbUrl(imageField?: string) {
+        if (!imageField) return '/bg.svg';
+
+        // if it's a full URL
+        if (/^https?:\/\//i.test(imageField)) {
+            // already numbered (iphone16_1.png) -> use as-is
+            if (/_\d+\.png$/i.test(imageField)) return imageField;
+            // ends with .png but not numbered -> strip extension and append _1
+            const m = imageField.match(/(.+?)\.png$/i);
+            if (m) return `${m[1]}_1.png`;
+            return imageField;
+        }
+
+        // raw id like "iphone16" or "iphone16.png" or "iphone16_2" -> normalize base and append _1
+        const base = String(imageField).replace(/\.png$/i, '').replace(/_(\d+)$/i, '');
+        return `${S3_BASE}${base}_1.png`;
+    }
 </script>
 
 <style>
@@ -114,7 +157,7 @@
     }
     img.hero-svg {
       width: 40vw;
-      height: 40vh;
+      height: 50vh;
       object-fit: contain;
       display: block;
     }
@@ -129,32 +172,53 @@
     }
 
     .modal-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 1rem;
-        max-width: 600px;
-        width: 90%;
-        display: flex;
-        flex-direction: row;
-        gap: 2rem;
-        position: relative;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 1.5px 6px rgba(0,0,0,0.12);
+    background: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    max-width: 920px;
+    width: calc(100% - 2rem);
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    position: relative;
+    box-shadow: 0 12px 40px rgba(2,6,23,0.12);
+  }
+
+  /* larger, fixed-ish image area that preserves aspect ratio */
+  .modal-image {
+    width: 360px;
+    height: 360px;
+    object-fit: contain; /* use cover if you prefer cropping */
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+    background: #ffffff;
+  }
+
+  /* details column stretches and wraps nicely */
+  .modal-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* smaller screens: stack and make image fill width but limit height */
+  @media (max-width: 768px) {
+    .modal-content {
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 92%;
+      padding: 1rem;
     }
     .modal-image {
-        width: 180px;
-        height: 180px;
-        object-fit: cover;
-        border-radius: 1rem;
-        flex-shrink: 0;
-        background: #f3f3f3;
+      width: 100%;
+      height: auto;
+      max-height: 100vh;
+      object-fit: contain;
     }
-    .modal-details {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        flex: 1;
-        min-width: 0;
-    }
+  }
+
     .modal-details h1 {
         margin: 0 0 0.5rem 0;
         font-size: 1.5rem;
@@ -210,6 +274,100 @@
         background: #e0e7ff !important;
         color: #2563eb !important;
     }
+
+    /* carousel container */
+  .carousel {
+    width: 360px;
+    height: 360px;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7fafc;
+    border-radius: 0.75rem;
+  }
+
+  .carousel-view {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .carousel-view img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* or cover if you want cropping */
+    object-position: center;
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 220ms ease, transform 220ms ease;
+    border-radius: 0.5rem;
+    background: #fff;
+  }
+
+  .carousel-view img.selected {
+    opacity: 1;
+    transform: scale(1);
+    z-index: 2;
+  }
+
+  .carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 5;
+  }
+  .carousel-btn.left { left: 8px; }
+  .carousel-btn.right { right: 8px; }
+
+  .carousel-btn:hover { background: rgba(255,255,255,0.98); }
+
+  .carousel-indicators {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 6;
+  }
+
+  .indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 0;
+    cursor: pointer;
+  }
+  .indicator.active {
+    background: #2563eb;
+    width: 14px;
+    border-radius: 8px;
+  }
+
+  /* responsive: stack on small screens */
+  @media (max-width: 768px) {
+    .modal-content { flex-direction: column; gap: 1rem; max-width: 92%; }
+    .carousel { width: 100%; height: auto; max-height: 50vh; }
+    .carousel-view img { position: relative; height: 100%; }
+    .carousel-btn { display: none; } /* use indicators / swipe on touch */
+  }
 </style>
 
 <!-- Gradient background for the whole page -->
@@ -351,46 +509,70 @@
 
     <!-- Deals grid, initially below the fold -->
     <div bind:this={gridRef} class="max-w-5xl mx-auto px-6 py-8 min-h-[80vh]" style="scroll-margin-top: 200px;"> 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {#each deals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
-                <a href={`/product/${deal.id}`} class="bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer" on:click|preventDefault={() => openProduct(deal)}>
-                    <img src={deal.image} alt={deal.title} class="w-24 h-24 object-cover mb-3 rounded" />
-                    <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
-                    <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
-                    <p class="text-gray-500 text-sm">{deal.store}</p>
-                </a>
-            {/each}
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {#each deals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
+          <a href={`/product/${deal.id}`} class="bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer" on:click|preventDefault={() => openProduct(deal)}>
+            <img
+              src={getThumbUrl(deal.image)}
+              alt={deal.title}
+              class="w-24 h-24 object-contain mb-3 rounded"
+              on:error={(e) => (e.currentTarget.src = '/bg.svg')}
+            />
+            <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
+            <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
+            <p class="text-gray-500 text-sm">{deal.store}</p>
+          </a>
+        {/each}
+      </div>
     </div>
 
     {#if selectedProduct}
-        <div
-            class="modal-backdrop"
-            role="button"
-            tabindex="0"
-            aria-label="Close modal"
-            on:click={closeModal}
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
-        >
+        <div class="modal-backdrop" on:click={closeModal}>
             <div
                 class="modal-content"
-                role="dialog"
-                aria-modal="true"
-                tabindex="0"
                 on:click|stopPropagation
-                on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
                 transition:scale={{ duration: 250, start: 0.8 }}
             >
-                <img class="modal-image" src={selectedProduct.image} alt={selectedProduct.title} />
+                <!-- NEW: image carousel (left) -->
+                <div class="carousel">
+                    <button class="carousel-btn left" on:click={prevImage} aria-label="Previous image">‹</button>
+
+                    <div class="carousel-view" role="list">
+                      {#each imageSlides as src, idx}
+                        <img
+                          role="listitem"
+                          alt={`${selectedProduct.title} (${idx + 1})`}
+                          src={src}
+                          class:selected={idx === currentImageIndex}
+                          on:error={(e) => (e.currentTarget.src = '/bg.svg')}
+                          loading="lazy"
+                        />
+                      {/each}
+                    </div>
+
+                    <button class="carousel-btn right" on:click={nextImage} aria-label="Next image">›</button>
+
+                    <!-- small indicators -->
+                    <div class="carousel-indicators">
+                      {#each imageSlides as _, idx}
+                        <button
+                          class="indicator {idx === currentImageIndex ? 'active' : ''}"
+                          on:click={() => (currentImageIndex = idx)}
+                          aria-label={"Show image " + (idx + 1)}
+                        />
+                      {/each}
+                    </div>
+                </div>
+
+                <!-- details (right) -->
                 <div class="modal-details">
                     <h1>{selectedProduct.title}</h1>
                     <p class="price">{selectedProduct.price}</p>
-                    {#if selectedProduct.description}
-                        <p>{selectedProduct.description}</p>
-                    {/if}
                     <p class="store">{selectedProduct.store}</p>
-                    <button class="close-btn" on:click={closeModal}>×</button>
+                    <p class="mt-2 text-sm text-gray-600">{selectedProduct.description}</p>
                 </div>
+
+                <button class="close-btn" on:click={closeModal}>×</button>
             </div>
         </div>
     {/if}
