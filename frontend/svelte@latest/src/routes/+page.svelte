@@ -65,6 +65,7 @@
 
     let selectedProduct: Deal | null = null;
     let accountCardSelected: boolean | null = null;
+    let profileCardSelected: boolean | null = null;
     let selectedCategory: string | null = null;
     let showSubHeader = false;
 
@@ -93,6 +94,7 @@
     function closeModal() {
         selectedProduct = null;
         accountCardSelected = false;
+        profileCardSelected = false;
     }
 
     function handleScroll() {
@@ -555,7 +557,13 @@
 
         <button
             class="px-3 py-1 fixed right-5 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
-            on:click={() => { accountCardSelected = !accountCardSelected; }}
+            on:click={() => {
+                if ($user) {
+                    profileCardSelected = !profileCardSelected;  // toggle profile modal
+                } else {
+                    accountCardSelected = !accountCardSelected;  // toggle login/account modal
+                }
+            }}
         >
             {$user?.nickname || 'Account'}
         </button>
@@ -985,12 +993,67 @@
             </div>
         {/if}
     {:else}
-        <!-- show user profile / account stuff -->
-        <div class="account-info text-center mt-4">
-            <p>Logged in as: <strong>{$user.email}</strong></p>
-            <p>Nickname: <strong>{$user.nickname}</strong></p>
+    {#if profileCardSelected}
+    <!-- show profile modal only if logged in -->
+    <div
+        class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+        role="button"
+        tabindex="0"
+        aria-label="Close modal"
+        on:click={() => { profileCardSelected = false; }}
+        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
+    >
+        <div
+            class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            tabindex="0"
+            on:click|stopPropagation
+            transition:scale={{ duration: 250, start: 0.8 }}
+            style="max-width: 400px; flex-direction: column; align-items: stretch;"
+        >
+            <!-- Profile Info -->
+            <div class="text-center mb-4">
+                <p class="text-xl font-bold mb-1">{$user.nickname}</p>
+                <p class="text-gray-600 mb-2">{$user.email}</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-2">
+                <button
+                    class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                    type="button"
+                    on:click={() => { /* trigger change password flow */ }}
+                >
+                    Change Password
+                </button>
+
+                <button
+                    class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-semibold"
+                    type="button"
+                    on:click={() => { /* go to favorites */ }}
+                >
+                    View Favorites
+                </button>
+            </div>
+
+            <!-- Close Button -->
+            <button
+                class="w-full mt-4 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition font-semibold"
+                type="button"
+                on:click={() => { profileCardSelected = false; }}
+            >
+                Close
+            </button>
         </div>
-    {/if}
+    </div>
+{/if}
+
+    <div class="account-info text-center mt-4">
+        <p>Logged in as: <strong>{$user.email}</strong></p>
+        <p>Nickname: <strong>{$user.nickname}</strong></p>
+    </div>
+{/if} <!-- outer if -->
 </div>
 
 
