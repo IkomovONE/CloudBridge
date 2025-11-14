@@ -1,6 +1,7 @@
 <script lang="ts">
     import { scale, fade, slide } from 'svelte/transition';
     import { onMount, onDestroy } from 'svelte';
+    import { writable } from 'svelte/store';
 
     const categories = [
         'Phones',
@@ -71,6 +72,14 @@
     let email = '';
     let password = '';
     let passwordRepeat = '';
+    let nickname = ''; // ADD THIS
+
+    let pendingEmail = '';
+    let confirmationCode = '';
+    let expectingConfirmation = false;
+
+    // add this state var
+    let registerStep: 'form' | 'verify' = 'form'; // track which step we're on
 
     function scrollToGrid() {
         gridRef?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +92,7 @@
     
     function closeModal() {
         selectedProduct = null;
+        accountCardSelected = false;
     }
 
     function handleScroll() {
@@ -112,7 +122,7 @@
     function buildImageSlidesFromId(id?: string): string[] {
         if (!id) return ['/bg.svg'];
         const base = String(id).replace(/\.png$/i, '').replace(/_(\d+)$/i, '');
-        return [1, 2, 3].map(i => `${base}_${i}.png`);
+        return [1, 2, 3].map(i => `${S3_BASE}${base}_${i}.png`);
     }
 
     // reactive slides derived from selectedProduct.image (which is a base id)
@@ -148,6 +158,159 @@
         const base = String(imageField).replace(/\.png$/i, '').replace(/_(\d+)$/i, '');
         return `${S3_BASE}${base}_1.png`;
     }
+
+    async function handleRegister() {
+        if (password !== passwordRepeat) {
+            alert('Passwords do not match');
+            return;
+        }
+
+        try {
+            const res = await fetch('http://localhost:8080/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, nickname })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(`Register failed: ${data.error || res.statusText}`);
+                return;
+            }
+
+            // move to verify step
+            pendingEmail = email;
+            registerStep = 'verify';
+            confirmationCode = '';
+        } catch (err: any) {
+            alert(`Register error: ${err.message}`);
+        }
+    }
+
+    async function handleConfirm() {
+        try {
+            const res = await fetch('http://localhost:8080/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: pendingEmail, code: confirmationCode })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(`Confirm failed: ${data.error || res.statusText}`);
+                return;
+            }
+            alert('Verification successful — you can now log in.');
+            
+            // reset and go back to login
+            registerStep = 'form';
+            accountMode = 'login';
+            email = '';
+            password = '';
+            passwordRepeat = '';
+            nickname = '';
+            confirmationCode = '';
+            pendingEmail = '';
+        } catch (err: any) {
+            alert(`Confirm error: ${err.message}`);
+        }
+    }
+
+    async function handleResend() {
+        try {
+            const res = await fetch('http://localhost:8080/resend-confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: pendingEmail })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(`Resend failed: ${data.error || res.statusText}`);
+                return;
+            }
+            alert('Code resent — check your email.');
+        } catch (err: any) {
+            alert(`Resend error: ${err.message}`);
+        }
+    }
+
+    const user = writable<{ email: string; nickname: string; idToken: string } | null>(null);
+
+    async function handleLogin() {
+        
+
+        try {
+            const res = await fetch('http://localhost:8080/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(`Login failed: ${data.error || res.statusText}`);
+                return;
+            }
+
+            // store tokens
+            localStorage.setItem('idToken', data.id_token);
+            localStorage.setItem('accessToken', data.access_token);
+            localStorage.setItem('refreshToken', data.refresh_token);
+
+            // decode id_token to get user info
+            const decoded = decodeToken(data.id_token);
+            user.set({
+                email: decoded.email,
+                nickname: decoded.nickname || decoded.preferred_username,
+                idToken: data.id_token
+            });
+
+            // reset form and close modal
+            accountCardSelected = false;
+            email = '';
+            password = '';
+
+            alert('Login successful!');
+        } catch (err: any) {
+            alert(`Login error: ${err.message}`);
+        }
+    }
+
+    // helper: decode JWT payload (no verification needed client-side for display)
+    function decodeToken(token: string) {
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) throw new Error('Invalid token');
+            const payload = JSON.parse(atob(parts[1]));
+            return payload;
+        } catch (err) {
+            console.error('Failed to decode token:', err);
+            return {};
+        }
+    }
+
+    // on mount: check if user is already logged in
+    onMount(() => {
+        const idToken = localStorage.getItem('idToken');
+        if (idToken) {
+            const decoded = decodeToken(idToken);
+            user.set({
+                email: decoded.email,
+                nickname: decoded.nickname || decoded.preferred_username,
+                idToken
+            });
+        }
+    });
+
+    // logout handler
+    function logout() {
+        localStorage.removeItem('idToken');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        user.set(null);
+        alert('Logged out');
+    }
+
+    // ...existing code...
 </script>
 
 <style>
@@ -392,14 +555,9 @@
 
         <button
             class="px-3 py-1 fixed right-5 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
-            on:click={() => {
-                
-                accountCardSelected = true;
-            }}
-
-            
+            on:click={() => { accountCardSelected = !accountCardSelected; }}
         >
-        Account 
+            {$user?.nickname || 'Account'}
         </button>
     </header>
 
@@ -583,8 +741,8 @@
             role="button"
             tabindex="0"
             aria-label="Close modal"
-            on:click={closeModal}
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+            on:click={() => { accountCardSelected = false; registerStep = 'form'; }}
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { accountCardSelected = false; registerStep = 'form'; } }}
         >
             <div
                 class="modal-content"
@@ -592,63 +750,245 @@
                 aria-modal="true"
                 tabindex="0"
                 on:click|stopPropagation
-                on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
                 transition:scale={{ duration: 250, start: 0.8 }}
                 style="max-width: 400px; flex-direction: column; align-items: stretch;"
             >
-                <div class="account-switch flex justify-center mb-4 gap-2">
-                    <button
-                        class="px-3 py-1 rounded-t bg-blue-600 text-white font-semibold"
-                        class:bg-blue-600={accountMode === 'login'}
-                        class:bg-blue-100={accountMode !== 'login'}
-                        class:text-blue-700={accountMode !== 'login'}
-                        on:click={() => accountMode = 'login'}
-                    >
-                        Login
-                    </button>
-                    <button
-                        class="px-3 py-1 rounded-t font-semibold"
-                        class:bg-blue-600={accountMode === 'register'}
-                        class:bg-blue-100={accountMode !== 'register'}
-                        class:text-blue-700={accountMode !== 'register'}
-                        on:click={() => accountMode = 'register'}
-                    >
-                        Register
-                    </button>
-                </div>
-                <div class="modal-details" style="align-items: stretch;">
-                    <h1 class="mb-4 text-xl font-bold text-center">{accountMode === 'login' ? 'Login' : 'Register'}</h1>
-                    <label class="mb-2 text-sm font-medium">E-mail</label>
-                    <input
-                        class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                        type="email"
-                        bind:value={email}
-                        placeholder="Enter your e-mail"
-                    />
-                    <label class="mb-2 text-sm font-medium">Password</label>
-                    <input
-                        class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                        type="password"
-                        bind:value={password}
-                        placeholder="Enter your password"
-                    />
-                    {#if accountMode === 'register'}
-                        <label class="mb-2 text-sm font-medium">Repeat Password</label>
+                <!-- FORM STEP (login or register form) -->
+                {#if registerStep === 'form'}
+                    <div class="account-switch flex justify-center mb-4 gap-2">
+                        <button
+                            class="px-3 py-1 rounded-t bg-blue-600 text-white font-semibold"
+                            class:bg-blue-600={accountMode === 'login'}
+                            class:bg-blue-100={accountMode !== 'login'}
+                            class:text-blue-700={accountMode !== 'login'}
+                            on:click={() => accountMode = 'login'}
+                        >
+                            Login
+                        </button>
+                        <button
+                            class="px-3 py-1 rounded-t font-semibold"
+                            class:bg-blue-600={accountMode === 'register'}
+                            class:bg-blue-100={accountMode !== 'register'}
+                            class:text-blue-700={accountMode !== 'register'}
+                            on:click={() => accountMode = 'register'}
+                        >
+                            Register
+                        </button>
+                    </div>
+                    <div class="modal-details" style="align-items: stretch;">
+                        <h1 class="mb-4 text-xl font-bold text-center">{accountMode === 'login' ? 'Login' : 'Register'}</h1>
+                        <label class="mb-2 text-sm font-medium">E-mail</label>
+                        <input
+                            class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                            type="email"
+                            bind:value={email}
+                            placeholder="Enter your e-mail"
+                        />
+
+                        {#if accountMode === 'register'}
+                            <label class="mb-2 text-sm font-medium">Nickname</label>
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type="text"
+                                bind:value={nickname}
+                                placeholder="Choose a nickname"
+                            />
+                        {/if}
+
+                        <label class="mb-2 text-sm font-medium">Password</label>
                         <input
                             class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
                             type="password"
-                            bind:value={passwordRepeat}
-                            placeholder="Repeat your password"
+                            bind:value={password}
+                            placeholder="Enter your password"
                         />
-                    {/if}
-                    <button
-                        class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
-                    >
-                        {accountMode === 'login' ? 'Login' : 'Register'}
-                    </button>
-                </div>
-                <button class="close-btn" on:click={() => {accountCardSelected = false}}>×</button>
+                        {#if accountMode === 'register'}
+                            <label class="mb-2 text-sm font-medium">Repeat Password</label>
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type="password"
+                                bind:value={passwordRepeat}
+                                placeholder="Repeat your password"
+                            />
+                        {/if}
+                        <button
+                            class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                            type="button"
+                            on:click={() => { accountMode === 'login' ? handleLogin() : handleRegister(); }}
+                        >
+                            {accountMode === 'login' ? 'Login' : 'Register'}
+                        </button>
+                    </div>
+                {/if}
+
+                <!-- VERIFY STEP (code entry) -->
+                {#if registerStep === 'verify'}
+                    <div class="modal-details" style="align-items: stretch;">
+                        <h1 class="mb-4 text-xl font-bold text-center">Verify Email</h1>
+                        <p class="text-sm text-gray-600 mb-4">We sent a code to <strong>{pendingEmail}</strong></p>
+                        <label class="mb-2 text-sm font-medium">Confirmation Code</label>
+                        <input
+                            class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                            type="text"
+                            bind:value={confirmationCode}
+                            placeholder="Enter the code from your email"
+                        />
+                        <button
+                            class="w-full mb-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                            on:click={handleConfirm}
+                        >
+                            Confirm
+                        </button>
+                        <button
+                            class="w-full mb-2 px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 transition"
+                            on:click={handleResend}
+                        >
+                            Resend Code
+                        </button>
+                        <button
+                            class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
+                            on:click={() => { registerStep = 'form'; confirmationCode = ''; }}
+                        >
+                            Back
+                        </button>
+                    </div>
+                {/if}
+
+                <button class="close-btn" on:click={() => { accountCardSelected = false; registerStep = 'form'; }}>×</button>
             </div>
+        </div>
+    {/if}
+
+    {#if !$user}
+        {#if accountCardSelected}
+            <!-- show login/register modal only if NOT logged in -->
+            <div
+                class="modal-backdrop"
+                role="button"
+                tabindex="0"
+                aria-label="Close modal"
+                on:click={() => { accountCardSelected = false; registerStep = 'form'; }}
+                on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { accountCardSelected = false; registerStep = 'form'; } }}
+            >
+                <div
+                    class="modal-content"
+                    role="dialog"
+                    aria-modal="true"
+                    tabindex="0"
+                    on:click|stopPropagation
+                    transition:scale={{ duration: 250, start: 0.8 }}
+                    style="max-width: 400px; flex-direction: column; align-items: stretch;"
+                >
+                    <!-- FORM STEP (login or register form) -->
+                    {#if registerStep === 'form'}
+                        <div class="account-switch flex justify-center mb-4 gap-2">
+                            <button
+                                class="px-3 py-1 rounded-t bg-blue-600 text-white font-semibold"
+                                class:bg-blue-600={accountMode === 'login'}
+                                class:bg-blue-100={accountMode !== 'login'}
+                                class:text-blue-700={accountMode !== 'login'}
+                                on:click={() => accountMode = 'login'}
+                            >
+                                Login
+                            </button>
+                            <button
+                                class="px-3 py-1 rounded-t font-semibold"
+                                class:bg-blue-600={accountMode === 'register'}
+                                class:bg-blue-100={accountMode !== 'register'}
+                                class:text-blue-700={accountMode !== 'register'}
+                                on:click={() => accountMode = 'register'}
+                            >
+                                Register
+                            </button>
+                        </div>
+                        <div class="modal-details" style="align-items: stretch;">
+                            <h1 class="mb-4 text-xl font-bold text-center">{accountMode === 'login' ? 'Login' : 'Register'}</h1>
+                            <label class="mb-2 text-sm font-medium">E-mail</label>
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type="email"
+                                bind:value={email}
+                                placeholder="Enter your e-mail"
+                            />
+
+                            {#if accountMode === 'register'}
+                                <label class="mb-2 text-sm font-medium">Nickname</label>
+                                <input
+                                    class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                    type="text"
+                                    bind:value={nickname}
+                                    placeholder="Choose a nickname"
+                                />
+                            {/if}
+
+                            <label class="mb-2 text-sm font-medium">Password</label>
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type="password"
+                                bind:value={password}
+                                placeholder="Enter your password"
+                            />
+                            {#if accountMode === 'register'}
+                                <label class="mb-2 text-sm font-medium">Repeat Password</label>
+                                <input
+                                    class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                    type="password"
+                                    bind:value={passwordRepeat}
+                                    placeholder="Repeat your password"
+                                />
+                            {/if}
+                            <button
+                                class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                                type="button"
+                                on:click={() => { accountMode === 'login' ? handleLogin() : handleRegister(); }}
+                            >
+                                {accountMode === 'login' ? 'Login' : 'Register'}
+                            </button>
+                        </div>
+                    {/if}
+
+                    <!-- VERIFY STEP (code entry) -->
+                    {#if registerStep === 'verify'}
+                        <div class="modal-details" style="align-items: stretch;">
+                            <h1 class="mb-4 text-xl font-bold text-center">Verify Email</h1>
+                            <p class="text-sm text-gray-600 mb-4">We sent a code to <strong>{pendingEmail}</strong></p>
+                            <label class="mb-2 text-sm font-medium">Confirmation Code</label>
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type="text"
+                                bind:value={confirmationCode}
+                                placeholder="Enter the code from your email"
+                            />
+                            <button
+                                class="w-full mb-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                                on:click={handleConfirm}
+                            >
+                                Confirm
+                            </button>
+                            <button
+                                class="w-full mb-2 px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 transition"
+                                on:click={handleResend}
+                            >
+                                Resend Code
+                            </button>
+                            <button
+                                class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
+                                on:click={() => { registerStep = 'form'; confirmationCode = ''; }}
+                            >
+                                Back
+                            </button>
+                        </div>
+                    {/if}
+
+                    <button class="close-btn" on:click={() => { accountCardSelected = false; registerStep = 'form'; }}>×</button>
+                </div>
+            </div>
+        {/if}
+    {:else}
+        <!-- show user profile / account stuff -->
+        <div class="account-info text-center mt-4">
+            <p>Logged in as: <strong>{$user.email}</strong></p>
+            <p>Nickname: <strong>{$user.nickname}</strong></p>
         </div>
     {/if}
 </div>

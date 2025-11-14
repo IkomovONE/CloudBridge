@@ -44,6 +44,8 @@ var cachedProducts []FullProduct
 func main() {
 	r := gin.Default()
 
+	InitCognito()
+
 	// load AWS config
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-north-1"))
 	if err != nil {
@@ -89,11 +91,6 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Ping endpoint
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
-	})
-
 	// Serve cached DynamoDB results here. This endpoint does NOT hit DynamoDB per request.
 	r.GET("/products", func(c *gin.Context) {
 		c.JSON(200, cachedProducts)
@@ -104,15 +101,14 @@ func main() {
 		c.JSON(200, products)
 	})
 
+	r.POST("/register", Register)
+	r.POST("/login", Login)
+
+	// confirm and resend endpoints for verification step
+	r.POST("/confirm", Confirm)
+	r.POST("/resend-confirm", ResendConfirmation)
+
 	r.GET("/favourites", func(c *gin.Context) {
-		c.JSON(200, products)
-	})
-
-	r.POST("/register", func(c *gin.Context) {
-		c.JSON(200, products)
-	})
-
-	r.POST("/login", func(c *gin.Context) {
 		c.JSON(200, products)
 	})
 
