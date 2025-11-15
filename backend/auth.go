@@ -226,6 +226,44 @@ func ResendConfirmation(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "code resent"})
 }
 
+// ---------------------- RESET PASSWORD -----------------------
+
+type ChangePasswordBody struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+}
+
+func ChangePassword(c *gin.Context) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(401, gin.H{"error": "missing token"})
+		return
+	}
+
+	token = strings.TrimPrefix(token, "Bearer ")
+
+	var body ChangePasswordBody
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(400, gin.H{"error": "invalid request"})
+		return
+	}
+
+	input := &cognitoidentityprovider.ChangePasswordInput{
+		AccessToken:      aws.String(token),
+		PreviousPassword: aws.String(body.OldPassword),
+		ProposedPassword: aws.String(body.NewPassword),
+	}
+
+	_, err := cognitoClient.ChangePassword(context.Background(), input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "password changed"})
+}
+
 // ---------------------- JWT MIDDLEWARE -----------------------
 
 func AuthMiddleware() gin.HandlerFunc {

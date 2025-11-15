@@ -2,6 +2,8 @@
     import { scale, fade, slide } from 'svelte/transition';
     import { onMount, onDestroy } from 'svelte';
     import { writable } from 'svelte/store';
+    import { addToast } from '$lib/toastStore';
+
 
     const categories = [
         'Phones',
@@ -75,12 +77,19 @@
     let passwordRepeat = '';
     let nickname = ''; // ADD THIS
 
+    let showPassword = false;
+    
+
+
     let pendingEmail = '';
     let confirmationCode = '';
+    let oldPassword = '';
+    let newPassword = '';
     let expectingConfirmation = false;
 
     // add this state var
-    let registerStep: 'form' | 'verify' = 'form'; // track which step we're on
+    let registerStep: 'form' | 'verify' = 'form'; 
+    let profileStep: 'none' | 'password' | 'favs' = 'none';// track which step we're on
 
     function scrollToGrid() {
         gridRef?.scrollIntoView({ behavior: 'smooth' });
@@ -163,7 +172,7 @@
 
     async function handleRegister() {
         if (password !== passwordRepeat) {
-            alert('Passwords do not match');
+            addToast("Passwords do not match", "error");
             return;
         }
 
@@ -176,7 +185,9 @@
 
             const data = await res.json();
             if (!res.ok) {
-                alert(`Register failed: ${data.error || res.statusText}`);
+                const error = data.error;
+                const friendly = error.split(":").pop().trim();
+                addToast(friendly || res.statusText, "error");
                 return;
             }
 
@@ -185,7 +196,9 @@
             registerStep = 'verify';
             confirmationCode = '';
         } catch (err: any) {
-            alert(`Register error: ${err.message}`);
+            
+            
+            addToast('Register error: ' + err.message, "error");
         }
     }
 
@@ -198,10 +211,13 @@
             });
             const data = await res.json();
             if (!res.ok) {
-                alert(`Confirm failed: ${data.error || res.statusText}`);
+                const error = data.error;
+                const friendly = error.split(":").pop().trim();
+                addToast('Confirm failed: '+ friendly || res.statusText, "error");
                 return;
             }
-            alert('Verification successful — you can now log in.');
+           
+            addToast('Verification successful — you can now log in.', "success");
             
             // reset and go back to login
             registerStep = 'form';
@@ -213,8 +229,48 @@
             confirmationCode = '';
             pendingEmail = '';
         } catch (err: any) {
-            alert(`Confirm error: ${err.message}`);
+            addToast(`Confirm error: ${err.message}`, "error");
         }
+    }
+
+    async function handleChangePassword() {
+    try {
+        const token = localStorage.getItem('accessToken'); // or idToken depending on Cognito setup
+        if (!token) {
+            addToast("No user token found. Please log in.", "error");
+            return;
+        }
+
+        const res = await fetch('http://localhost:8080/change-password', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // send token in header
+            },
+            body: JSON.stringify({ 
+                old_password: oldPassword, 
+                new_password: newPassword
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            const error = data.error;
+            const friendly = error?.split(":").pop().trim();
+            addToast('Change password failed: ' + (friendly || res.statusText), "error");
+            return;
+        }
+
+        addToast('Password changed successfully — you can now log in.', "success");
+
+        // reset form
+        oldPassword = '';
+        newPassword = '';
+
+    } catch (err: any) {
+        addToast(`Change password error: ${err.message}`, "error");
+    }
     }
 
     async function handleResend() {
@@ -226,12 +282,15 @@
             });
             const data = await res.json();
             if (!res.ok) {
-                alert(`Resend failed: ${data.error || res.statusText}`);
+                const error = data.error;
+                const friendly = error.split(":").pop().trim();
+                addToast(friendly || res.statusText, "error");
                 return;
             }
-            alert('Code resent — check your email.');
+            
+            addToast('Code resent — check your email.', "info");
         } catch (err: any) {
-            alert(`Resend error: ${err.message}`);
+            addToast(`Resend error: ${err.message}`, "error");
         }
     }
 
@@ -248,8 +307,12 @@
             });
 
             const data = await res.json();
+            
             if (!res.ok) {
-                alert(`Login failed: ${data.error || res.statusText}`);
+                const error = data.error;
+                const friendly = error.split(":").pop().trim();
+                addToast(friendly || res.statusText, "error");
+                
                 return;
             }
 
@@ -271,9 +334,14 @@
             email = '';
             password = '';
 
-            alert('Login successful!');
+            return true
+
+
+
+            
         } catch (err: any) {
-            alert(`Login error: ${err.message}`);
+            addToast(`Login error: ${err.message}`, "error");
+            return false
         }
     }
 
@@ -309,7 +377,6 @@
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         user.set(null);
-        alert('Logged out');
     }
 
     // ...existing code...
@@ -743,129 +810,7 @@
         </div>
     {/if}
 
-    {#if accountCardSelected}
-        <div
-            class="modal-backdrop"
-            role="button"
-            tabindex="0"
-            aria-label="Close modal"
-            on:click={() => { accountCardSelected = false; registerStep = 'form'; }}
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { accountCardSelected = false; registerStep = 'form'; } }}
-        >
-            <div
-                class="modal-content"
-                role="dialog"
-                aria-modal="true"
-                tabindex="0"
-                on:click|stopPropagation
-                transition:scale={{ duration: 250, start: 0.8 }}
-                style="max-width: 400px; flex-direction: column; align-items: stretch;"
-            >
-                <!-- FORM STEP (login or register form) -->
-                {#if registerStep === 'form'}
-                    <div class="account-switch flex justify-center mb-4 gap-2">
-                        <button
-                            class="px-3 py-1 rounded-t bg-blue-600 text-white font-semibold"
-                            class:bg-blue-600={accountMode === 'login'}
-                            class:bg-blue-100={accountMode !== 'login'}
-                            class:text-blue-700={accountMode !== 'login'}
-                            on:click={() => accountMode = 'login'}
-                        >
-                            Login
-                        </button>
-                        <button
-                            class="px-3 py-1 rounded-t font-semibold"
-                            class:bg-blue-600={accountMode === 'register'}
-                            class:bg-blue-100={accountMode !== 'register'}
-                            class:text-blue-700={accountMode !== 'register'}
-                            on:click={() => accountMode = 'register'}
-                        >
-                            Register
-                        </button>
-                    </div>
-                    <div class="modal-details" style="align-items: stretch;">
-                        <h1 class="mb-4 text-xl font-bold text-center">{accountMode === 'login' ? 'Login' : 'Register'}</h1>
-                        <label class="mb-2 text-sm font-medium">E-mail</label>
-                        <input
-                            class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                            type="email"
-                            bind:value={email}
-                            placeholder="Enter your e-mail"
-                        />
-
-                        {#if accountMode === 'register'}
-                            <label class="mb-2 text-sm font-medium">Nickname</label>
-                            <input
-                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                                type="text"
-                                bind:value={nickname}
-                                placeholder="Choose a nickname"
-                            />
-                        {/if}
-
-                        <label class="mb-2 text-sm font-medium">Password</label>
-                        <input
-                            class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                            type="password"
-                            bind:value={password}
-                            placeholder="Enter your password"
-                        />
-                        {#if accountMode === 'register'}
-                            <label class="mb-2 text-sm font-medium">Repeat Password</label>
-                            <input
-                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                                type="password"
-                                bind:value={passwordRepeat}
-                                placeholder="Repeat your password"
-                            />
-                        {/if}
-                        <button
-                            class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
-                            type="button"
-                            on:click={() => { accountMode === 'login' ? handleLogin() : handleRegister(); }}
-                        >
-                            {accountMode === 'login' ? 'Login' : 'Register'}
-                        </button>
-                    </div>
-                {/if}
-
-                <!-- VERIFY STEP (code entry) -->
-                {#if registerStep === 'verify'}
-                    <div class="modal-details" style="align-items: stretch;">
-                        <h1 class="mb-4 text-xl font-bold text-center">Verify Email</h1>
-                        <p class="text-sm text-gray-600 mb-4">We sent a code to <strong>{pendingEmail}</strong></p>
-                        <label class="mb-2 text-sm font-medium">Confirmation Code</label>
-                        <input
-                            class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                            type="text"
-                            bind:value={confirmationCode}
-                            placeholder="Enter the code from your email"
-                        />
-                        <button
-                            class="w-full mb-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
-                            on:click={handleConfirm}
-                        >
-                            Confirm
-                        </button>
-                        <button
-                            class="w-full mb-2 px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 transition"
-                            on:click={handleResend}
-                        >
-                            Resend Code
-                        </button>
-                        <button
-                            class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
-                            on:click={() => { registerStep = 'form'; confirmationCode = ''; }}
-                        >
-                            Back
-                        </button>
-                    </div>
-                {/if}
-
-                <button class="close-btn" on:click={() => { accountCardSelected = false; registerStep = 'form'; }}>×</button>
-            </div>
-        </div>
-    {/if}
+    
 
     {#if !$user}
         {#if accountCardSelected}
@@ -875,8 +820,22 @@
                 role="button"
                 tabindex="0"
                 aria-label="Close modal"
-                on:click={() => { accountCardSelected = false; registerStep = 'form'; }}
-                on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { accountCardSelected = false; registerStep = 'form'; } }}
+                on:click={() => { accountCardSelected = false; registerStep = 'form';}}
+                on:keydown={async (e) => {
+                    // only trigger on Enter or Space
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        if (accountMode === 'login') {
+                            const success = await handleLogin();
+                            if (success) {
+                                closeModal();
+                                addToast('Welcome, ' + $user.nickname + '!', 'success');
+                            }
+                        } else if (accountMode === 'register' && registerStep !== 'verify') {
+                            handleRegister(); // no modal closing here
+                        }
+                    }
+                }}
+                
             >
                 <div
                     class="modal-content"
@@ -932,7 +891,7 @@
                             <label class="mb-2 text-sm font-medium">Password</label>
                             <input
                                 class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 bind:value={password}
                                 placeholder="Enter your password"
                             />
@@ -940,11 +899,14 @@
                                 <label class="mb-2 text-sm font-medium">Repeat Password</label>
                                 <input
                                     class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     bind:value={passwordRepeat}
                                     placeholder="Repeat your password"
                                 />
                             {/if}
+                            <button type="button" on:click={() => showPassword = !showPassword}>
+                                {showPassword ? "Hide password" : "Show password"}
+                            </button>
                             <button
                                 class="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
                                 type="button"
@@ -982,6 +944,10 @@
                             <button
                                 class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
                                 on:click={() => { registerStep = 'form'; confirmationCode = ''; }}
+                                on:keydown={async (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ' && registerStep === 'verify') {
+                                    handleConfirm();}
+                                }}
                             >
                                 Back
                             </button>
@@ -993,61 +959,167 @@
             </div>
         {/if}
     {:else}
-    {#if profileCardSelected}
-    <!-- show profile modal only if logged in -->
-    <div
-        class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
-        role="button"
-        tabindex="0"
-        aria-label="Close modal"
-        on:click={() => { profileCardSelected = false; }}
-        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
-    >
-        <div
-            class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
-            role="dialog"
-            aria-modal="true"
-            tabindex="0"
-            on:click|stopPropagation
-            transition:scale={{ duration: 250, start: 0.8 }}
-            style="max-width: 400px; flex-direction: column; align-items: stretch;"
-        >
-            <!-- Profile Info -->
-            <div class="text-center mb-4">
-                <p class="text-xl font-bold mb-1">{$user.nickname}</p>
-                <p class="text-gray-600 mb-2">{$user.email}</p>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex flex-col gap-2">
-                <button
-                    class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
-                    type="button"
-                    on:click={() => { /* trigger change password flow */ }}
+        {#if profileCardSelected}
+        <!-- show profile modal only if logged in -->
+            {#if profileStep === 'none'}
+                <div
+                    class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Close modal"
+                    on:click={() => { profileCardSelected = false; }}
+                    on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
                 >
-                    Change Password
-                </button>
+                    <div
+                        class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
+                        role="dialog"
+                        aria-modal="true"
+                        tabindex="0"
+                        on:click|stopPropagation
+                        transition:scale={{ duration: 250, start: 0.8 }}
+                        style="max-width: 400px; flex-direction: column; align-items: stretch;"
+                    >
+                        <!-- Profile Info -->
+                        <div class="text-center mb-4">
+                            <p class="text-xl font-bold mb-1">{$user.nickname}</p>
+                            <p class="text-gray-600 mb-2">{$user.email}</p>
+                        </div>
 
-                <button
-                    class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-semibold"
-                    type="button"
-                    on:click={() => { /* go to favorites */ }}
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col gap-2">
+                            <button
+                                class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                                type="button"
+                                on:click={() => {profileStep = 'password'; showPassword = false; oldPassword = ''; newPassword = '';}}
+                            >
+                                Change Password
+                            </button>
+
+                            <button
+                                class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-semibold"
+                                type="button"
+                                on:click={() => profileStep = 'favs' }
+                            >
+                                View Favorites
+                            </button>
+
+                            
+                        </div>
+
+                        <!-- Close Button -->
+                        <button
+                                class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-red-700 transition font-semibold"
+                                type="button"
+                                on:click={() => { logout(); addToast('Logged out successfully', 'info');}}
+                            >
+                                Log out
+                        </button>
+                    </div>
+                </div>
+                {/if}
+            {#if profileStep === 'password'}
+                <div
+                    class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Close modal"
+                    on:click={() => { profileCardSelected = false; profileStep = 'none'; }}
+                    on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
                 >
-                    View Favorites
-                </button>
-            </div>
+                    <div
+                        class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
+                        role="dialog"
+                        aria-modal="true"
+                        tabindex="0"
+                        on:click|stopPropagation
+                        transition:scale={{ duration: 250, start: 0.8 }}
+                        style="max-width: 400px; flex-direction: column; align-items: stretch;"
+                    >
+                       
+                        
 
-            <!-- Close Button -->
-            <button
-                class="w-full mt-4 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition font-semibold"
-                type="button"
-                on:click={() => { profileCardSelected = false; }}
-            >
-                Close
-            </button>
-        </div>
-    </div>
-{/if}
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col gap-2">
+                            <h1 class="mb-4 text-xl font-bold text-center">Change password for {$user.nickname}</h1>
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type={showPassword ? "text" : "password"}
+                                bind:value={oldPassword}
+                                placeholder="Enter old password"
+                            />
+                            
+                            <input
+                                class="mb-4 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
+                                type={showPassword ? "text" : "password"}
+                                bind:value={newPassword}
+                                placeholder="Enter new password"
+                            />
+
+                            <button type="button" on:click={() => showPassword = !showPassword}>
+                                {showPassword ? "Hide passwords" : "Show passwords"}
+                            </button>
+
+                            
+                            <button
+                                class="w-full mb-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-semibold"
+                                on:click={handleChangePassword}
+                            >
+                                Confirm
+                            </button>
+
+                            
+
+                            
+                        </div>
+
+                        <!-- Close Button -->
+                        <button
+                                class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition font-semibold"
+                                type="button"
+                                on:click={() => { profileStep = 'none'; oldPassword = ''; newPassword = '';}}
+                            >
+                                Go back
+                        </button>
+                    </div>
+                </div>
+                {/if}
+            {#if profileStep === 'favs'}
+                <div
+                    class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Close modal"
+                    on:click={() => { profileCardSelected = false; profileStep = 'none';}}
+                    on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
+                >
+                    <div
+                        class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
+                        role="dialog"
+                        aria-modal="true"
+                        tabindex="0"
+                        on:click|stopPropagation
+                        transition:scale={{ duration: 250, start: 0.8 }}
+                        style="max-width: 400px; flex-direction: column; align-items: stretch;"
+                    >
+                        <!-- Profile Info -->
+                        <div class="text-center mb-4">
+                            <p class="text-xl font-bold mb-1">{$user.nickname}</p>
+                            <p class="text-gray-600 mb-2">Favourites list</p>
+                        </div>
+
+                       
+                           
+                        </div>
+
+                       
+                    </div>
+                
+                {/if}
+        {/if} <!-- profileCardSelected -->
+
+        
+   
+    
 
     <div class="account-info text-center mt-4">
         <p>Logged in as: <strong>{$user.email}</strong></p>

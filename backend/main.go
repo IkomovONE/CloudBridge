@@ -108,6 +108,8 @@ func main() {
 	r.POST("/confirm", Confirm)
 	r.POST("/resend-confirm", ResendConfirmation)
 
+	r.POST("/change-password", ChangePassword)
+
 	r.GET("/favourites", func(c *gin.Context) {
 		c.JSON(200, products)
 	})
