@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -36,6 +37,11 @@ var products = []Product{
 	{ID: "1", Name: "Laptop X", Price: 999.99},
 	{ID: "2", Name: "Smartphone Y", Price: 499.50},
 	{ID: "3", Name: "Headphones Z", Price: 89.90},
+}
+
+type FavouriteRequest struct {
+	UserID string `json:"user_id"`
+	DealID string `json:"deal_id"`
 }
 
 // cachedProducts will be populated once at startup from DynamoDB
@@ -110,14 +116,139 @@ func main() {
 
 	r.POST("/change-password", ChangePassword)
 
-	r.GET("/favourites", func(c *gin.Context) {
-		c.JSON(200, products)
+	r.POST("/favourites", func(c *gin.Context) {
+		var body struct {
+			UserId string `json:"userId"`
+		}
+
+		if err := c.BindJSON(&body); err != nil || body.UserId == "" {
+			c.JSON(400, gin.H{"error": "missing userId"})
+			return
+		}
+
+		userId := body.UserId
+
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-north-1"))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "aws config error"})
+			return
+		}
+
+		svc := dynamodb.NewFromConfig(cfg)
+
+		out, err := svc.GetItem(context.TODO(), &dynamodb.GetItemInput{
+			TableName: aws.String("Favourites"),
+			Key: map[string]types.AttributeValue{
+				"user_id": &types.AttributeValueMemberS{Value: userId}, // <-- FIXED
+			},
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		if out.Item == nil {
+			c.JSON(200, gin.H{
+				"userId":            userId,
+				"favouriteProducts": []string{},
+			})
+			return
+		}
+
+		var fav struct {
+			UserId            string   `dynamodbav:"user_id"`
+			FavouriteProducts []string `dynamodbav:"fav_ids"`
+		}
+
+		if err := attributevalue.UnmarshalMap(out.Item, &fav); err != nil {
+			c.JSON(500, gin.H{"error": "failed to unmarshal favourite item"})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"userId":            fav.UserId,
+			"favouriteProducts": fav.FavouriteProducts,
+		})
 	})
 
-	r.PUT("/addfavourite", func(c *gin.Context) {
-		c.JSON(200, products)
-	})
+	r.POST("/addfavourite", func(c *gin.Context) {
+		var body struct {
+			UserId string `json:"userId"`
+			DealId string `json:"dealId"`
+		}
 
+		if err := c.BindJSON(&body); err != nil || body.UserId == "" || body.DealId == "" {
+			c.JSON(400, gin.H{"error": "missing userId or dealId"})
+			return
+		}
+
+		userId := body.UserId
+		dealId := body.DealId
+
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-north-1"))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "aws config error"})
+			return
+		}
+
+		svc := dynamodb.NewFromConfig(cfg)
+
+		// First, get the current fav_ids
+		out, err := svc.GetItem(context.TODO(), &dynamodb.GetItemInput{
+			TableName: aws.String("Favourites"),
+			Key: map[string]types.AttributeValue{
+				"user_id": &types.AttributeValueMemberS{Value: userId},
+			},
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		var favIds []string
+		if out.Item != nil {
+			if v, ok := out.Item["fav_ids"]; ok {
+				if l, ok := v.(*types.AttributeValueMemberL); ok {
+					for _, item := range l.Value {
+						if s, ok := item.(*types.AttributeValueMemberS); ok {
+							favIds = append(favIds, s.Value)
+						}
+					}
+				}
+			}
+		}
+
+		// If already present
+		for _, id := range favIds {
+			if id == dealId {
+				c.JSON(200, gin.H{"userId": userId, "favouriteProducts": favIds, "status": "already_in_favourites"})
+				return
+			}
+		}
+
+		// Append new dealId
+		favIds = append(favIds, dealId)
+
+		av, err := attributevalue.MarshalList(favIds)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to marshal fav_ids"})
+			return
+		}
+
+		_, err = svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
+			TableName: aws.String("Favourites"),
+			Item: map[string]types.AttributeValue{
+				"user_id": &types.AttributeValueMemberS{Value: userId},
+				"fav_ids": &types.AttributeValueMemberL{Value: av},
+			},
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{"userId": userId, "addedFavourite": dealId, "status": "added"})
+	})
 	r.PUT("/removefavourite", func(c *gin.Context) {
 		c.JSON(200, products)
 	})

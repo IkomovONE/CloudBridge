@@ -3,6 +3,8 @@
     import { onMount, onDestroy } from 'svelte';
     import { writable } from 'svelte/store';
     import { addToast } from '$lib/toastStore';
+	import { refreshAll } from '$app/navigation';
+    
 
 
     const categories = [
@@ -78,6 +80,8 @@
     let nickname = ''; // ADD THIS
 
     let showPassword = false;
+
+    let favouritesSelected= false;
     
 
 
@@ -296,6 +300,12 @@
 
     const user = writable<{ email: string; nickname: string; idToken: string } | null>(null);
 
+    let user_id= '';
+
+    let favouriteDeals = [];
+
+    let favouriteDealsMemory = [];
+
     async function handleLogin() {
         
 
@@ -323,11 +333,21 @@
 
             // decode id_token to get user info
             const decoded = decodeToken(data.id_token);
+
+            
             user.set({
                 email: decoded.email,
                 nickname: decoded.nickname || decoded.preferred_username,
                 idToken: data.id_token
             });
+
+            handleFavourites();
+
+            loadFavouritesMemory();
+
+            
+
+
 
             // reset form and close modal
             accountCardSelected = false;
@@ -342,6 +362,66 @@
         } catch (err: any) {
             addToast(`Login error: ${err.message}`, "error");
             return false
+        }
+    }
+
+
+    async function handleFavourites() {
+        try {
+            let decodedID = decodeToken($user.idToken);
+            let userId = decodedID.sub;
+
+            const res = await fetch("http://localhost:8080/favourites", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId })  // <-- FIXED
+            });
+
+            const data = await res.json();
+            return data.favouriteProducts || [];
+
+        } catch (err: any) {
+            addToast(`Favourites error: ${err.message}`, "error");
+            return [];
+        }
+    }
+
+    async function loadFavourites() {
+        const favIds = await handleFavourites();
+        favouriteDeals = deals.filter(p => favIds.includes(p.id));
+        favouriteDealsMemory = deals.filter(p => favIds.includes(p.id));
+        
+    }
+
+    async function loadFavouritesMemory() {
+        const favIds = await handleFavourites();
+        favouriteDealsMemory = deals.filter(p => favIds.includes(p.id));
+        
+    }
+
+
+    async function addFavourite(deal) {
+        try {
+            const res = await fetch("/addfavourite", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: String(user_id),
+                    dealId: String(deal.id) // <-- force string
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && (data.status === "added" || data.status === "already_in_favourites")) {
+                if (!favouriteDeals.includes(String(deal.id))) { // keep consistent
+                    favouriteDeals.push(String(deal.id));
+                }
+            }
+            addToast("Added to favourites", "success");
+        } catch (err) {
+            console.error("Failed to add favourite:", err);
+            addToast("Failed to add favourite: " + err, "error");
         }
     }
 
@@ -377,6 +457,8 @@
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         user.set(null);
+        user_id= '';
+        favouriteDealsMemory = [];
     }
 
     // ...existing code...
@@ -609,16 +691,52 @@
     <header class="fixed top-0 left-0 z-50 px-6 py-4 bg-white shadow w-full flex items-center">
         <div class="text-2xl font-extrabold text-blue-700 tracking-tight select-none">CloudBridge</div>
 
+        
         <button
-            class="px-3 py-1 fixed right-30 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
-            
+            class="px-3 py-1 fixed left-50 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+        
             on:click={() => {
                 
-                scrollToGrid();
+
+                window.onbeforeunload = () => window.scrollTo(0, 0);
+                location.reload();
+                
+                
             }}
         >
-        ☆Favourites 
+            Home
         </button>
+
+        <button
+            class="px-3 py-1 fixed left-70 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+        
+            on:click={() => {
+                selectedCategory = null;
+                scrollToGrid();
+                favouritesSelected= false;
+                
+            }}
+        >
+            About
+        </button>
+        
+
+        {#if $user}
+            <button
+                class="px-3 py-1 fixed right-35 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+            
+                on:click={() => {
+                    loadFavourites();
+                    selectedCategory = null;
+                    scrollToGrid();
+                    favouritesSelected= true; 
+                }}
+            >
+                ☆Favourites 
+            </button>
+        {/if}
+
+       
 
         <p class="px-3 py-1 fixed right-24" style="font-size: large;">|</p>
 
@@ -632,7 +750,7 @@
                 }
             }}
         >
-            {$user?.nickname || 'Account'}
+            {$user?.nickname || 'Login / Sign Up'}
         </button>
     </header>
 
@@ -641,32 +759,55 @@
 
     <!-- Sub-header visible only when scrolling down -->
     {#if showSubHeader}
-        <div transition:slide class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:32px;">
-            <nav class="flex gap-2 flex-wrap justify-center w-full">
-                {#each categories as category}
+
+        {#if favouritesSelected}
+            <div transition:slide class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:80px;">
+                <nav class="flex gap-2 flex-wrap justify-center w-full">
+                    <span class="text-blue-700 font-semibold">
+                        Viewing {$user?.nickname}'s Favourite Deals
+                    </span>
+
                     <button
-                        class="px-3 py-1 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
-                        class:opacity-60={selectedCategory === category}
-                        class:font-semibold={selectedCategory === category}
+                        class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
                         on:click={() => {
-                            selectedCategory = category;
+                            selectedCategory = null;
                             scrollToGrid();
+                            favouritesSelected = false;
                         }}
                     >
-                        {category}
+                        Back to latest deals
                     </button>
-                {/each}
-                <button
-                    class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                    on:click={() => {
-                        selectedCategory = null;
-                        scrollToGrid();
-                    }}
-                >
-                    Reset filter
-                </button>
-            </nav>
-        </div>
+                </nav>
+            </div>
+        {:else}
+            <div transition:slide class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:32px;">
+                <nav class="flex gap-2 flex-wrap justify-center w-full">
+                    {#each categories as category}
+                        <button
+                            class="px-3 py-1 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+                            class:opacity-60={selectedCategory === category}
+                            class:font-semibold={selectedCategory === category}
+                            on:click={() => {
+                                selectedCategory = category;
+                                scrollToGrid();
+                            }}
+                        >
+                            {category}
+                        </button>
+                    {/each}
+                    <button
+                        class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                        on:click={() => {
+                            selectedCategory = null;
+                            scrollToGrid();
+                            favouritesSelected= false;
+                        }}
+                    >
+                        Reset filter
+                    </button>
+                </nav>
+            </div>
+        {/if}
     {/if}
 
     <!-- Main content centered, px-6 for padding, pt-20 for header space -->
@@ -710,6 +851,7 @@
                             on:click={() => {
                                 selectedCategory = null;
                                 scrollToGrid();
+                                favouritesSelected= false;
                             }}
                         >
                             Show All
@@ -729,7 +871,7 @@
             <button
                 type="button"
                 class="flex flex-col items-center mb-8 cursor-pointer select-none bg-transparent border-none focus:outline-none"
-                on:click={scrollToGrid}
+                on:click={() => {scrollToGrid(); favouritesSelected= false;}}
                 aria-label="Browse for latest deals"
             >
                 <span class="text-lg font-semibold animate-pulse">Browse for latest deals</span>
@@ -741,22 +883,98 @@
     </div>
 
     <!-- Deals grid, initially below the fold -->
-    <div bind:this={gridRef} class="max-w-5xl mx-auto px-6 py-8 min-h-[80vh]" style="scroll-margin-top: 200px;"> 
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {#each deals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
-          <a href={`/product/${deal.id}`} class="bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer" on:click|preventDefault={() => openProduct(deal)}>
-            <img
-              src={getThumbUrl(deal.image)}
-              alt={deal.title}
-              class="w-24 h-24 object-contain mb-3 rounded"
-              on:error={(e) => (e.currentTarget.src = '/bg.svg')}
-            />
-            <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
-            <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
-            <p class="text-gray-500 text-sm">{deal.store}</p>
-          </a>
-        {/each}
-      </div>
+        <div bind:this={gridRef} 
+        class="max-w-5xl mx-auto px-6 py-8 min-h-[80vh]" 
+        style="scroll-margin-top: 200px;"> 
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+            {#if favouritesSelected}
+
+        
+
+                {#if favouriteDeals.length === 0}
+                    <p class="text-center col-span-full text-gray-500">
+                        You have no favourite deals yet.
+                    </p>
+                {/if}
+
+                {#each favouriteDeals as deal}
+                    <a href={`/product/${deal.id}`} 
+                    class="bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer"
+                    on:click|preventDefault={() => openProduct(deal)}>
+                    
+                        <img
+                            src={getThumbUrl(deal.image)}
+                            alt={deal.title}
+                            class="w-24 h-24 object-contain mb-3 rounded"
+                            on:error={(e) => (e.currentTarget.src = '/bg.svg')}
+                        />
+                        <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
+                        <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
+                        <p class="text-gray-500 text-sm">{deal.store}</p>
+                    </a>
+                {/each}
+
+            {:else}
+
+                {#each deals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
+                    <div class="relative bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer">
+
+                        <!-- Star button -->
+                        {#if $user}
+                            <button
+                                class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
+                                on:click|stopPropagation={() => addFavourite(deal)}
+                                aria-label="Add to favourites"
+                            >
+                                {#if favouriteDealsMemory.includes(deal.id)}
+                                    <!-- Filled star -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
+                                    </svg>
+                                {:else}
+                                    <!-- Empty star -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
+                                    </svg>
+                                {/if}
+                            </button>
+                        {/if}
+                        {#if !$user}
+                            <button
+                                class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
+                                on:click|stopPropagation={() => {
+                                    accountCardSelected = true;
+                                }}
+                                aria-label="Login to add favourites"
+                            >
+                                <!-- Empty star -->
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
+                                </svg>
+                            </button>
+                        {/if}
+
+                        <a href={`/product/${deal.id}`} 
+                            class="flex flex-col items-center"
+                            on:click|preventDefault={() => openProduct(deal)}
+                        >
+                            <img
+                                src={getThumbUrl(deal.image)}
+                                alt={deal.title}
+                                class="w-24 h-24 object-contain mb-3 rounded"
+                                on:error={(e) => (e.currentTarget.src = '/bg.svg')}
+                            />
+                            <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
+                            <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
+                            <p class="text-gray-500 text-sm">{deal.store}</p>
+                        </a>
+                    </div>
+                {/each}
+            {/if}
+
+        </div>
     </div>
 
     {#if selectedProduct}
@@ -998,7 +1216,7 @@
                             <button
                                 class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-semibold"
                                 type="button"
-                                on:click={() => profileStep = 'favs' }
+                                on:click={() => {profileStep = 'none'; handleFavourites(); loadFavourites(); favouritesSelected= true; closeModal(); scrollToGrid();} }
                             >
                                 View Favorites
                             </button>
@@ -1083,38 +1301,7 @@
                     </div>
                 </div>
                 {/if}
-            {#if profileStep === 'favs'}
-                <div
-                    class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
-                    role="button"
-                    tabindex="0"
-                    aria-label="Close modal"
-                    on:click={() => { profileCardSelected = false; profileStep = 'none';}}
-                    on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
-                >
-                    <div
-                        class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
-                        role="dialog"
-                        aria-modal="true"
-                        tabindex="0"
-                        on:click|stopPropagation
-                        transition:scale={{ duration: 250, start: 0.8 }}
-                        style="max-width: 400px; flex-direction: column; align-items: stretch;"
-                    >
-                        <!-- Profile Info -->
-                        <div class="text-center mb-4">
-                            <p class="text-xl font-bold mb-1">{$user.nickname}</p>
-                            <p class="text-gray-600 mb-2">Favourites list</p>
-                        </div>
-
-                       
-                           
-                        </div>
-
-                       
-                    </div>
-                
-                {/if}
+            
         {/if} <!-- profileCardSelected -->
 
         
@@ -1127,6 +1314,7 @@
     </div>
 {/if} <!-- outer if -->
 </div>
+
 
 
 
