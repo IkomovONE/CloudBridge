@@ -4,6 +4,7 @@
     import { writable } from 'svelte/store';
     import { addToast } from '$lib/toastStore';
 	import { refreshAll } from '$app/navigation';
+	
     
 
 
@@ -82,6 +83,14 @@
     let showPassword = false;
 
     let favouritesSelected= false;
+
+    let favouriteDealsMemory = [];
+
+    const user = writable<{ email: string; nickname: string; idToken: string } | null>(null);
+
+    let user_id= '';
+
+    let favouriteDeals = [];
     
 
 
@@ -298,13 +307,9 @@
         }
     }
 
-    const user = writable<{ email: string; nickname: string; idToken: string } | null>(null);
+    
 
-    let user_id= '';
-
-    let favouriteDeals = [];
-
-    let favouriteDealsMemory = [];
+    
 
     async function handleLogin() {
         
@@ -389,27 +394,36 @@
     async function loadFavourites() {
         const favIds = await handleFavourites();
         favouriteDeals = deals.filter(p => favIds.includes(p.id));
-        favouriteDealsMemory = deals.filter(p => favIds.includes(p.id));
+        favouriteDealsMemory = favIds;
+        
         
     }
 
     async function loadFavouritesMemory() {
         const favIds = await handleFavourites();
-        favouriteDealsMemory = deals.filter(p => favIds.includes(p.id));
+        favouriteDealsMemory = favIds;
         
     }
 
 
     async function addFavourite(deal) {
         try {
-            const res = await fetch("/addfavourite", {
+
+            let decodedID = decodeToken($user.idToken);
+            let userId = decodedID.sub;
+
+            
+
+            const res = await fetch("http://localhost:8080/addfavourite", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    userId: String(user_id),
+                    userId: String(userId),
                     dealId: String(deal.id) // <-- force string
                 })
             });
+
+            
 
             const data = await res.json();
 
@@ -418,10 +432,56 @@
                     favouriteDeals.push(String(deal.id));
                 }
             }
+            favouriteDealsMemory = [...favouriteDealsMemory, String(deal.id)];
             addToast("Added to favourites", "success");
+
+
         } catch (err) {
+            
             console.error("Failed to add favourite:", err);
             addToast("Failed to add favourite: " + err, "error");
+        }
+    }
+
+
+
+    async function removeFavourite(deal) {
+        try {
+
+            let decodedID = decodeToken($user.idToken);
+            let userId = decodedID.sub;
+
+            
+
+            
+
+            const res = await fetch("http://localhost:8080/removefavourite", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: String(userId),
+                    dealId: String(deal.id) // <-- force string
+                })
+            });
+
+            
+
+            const data = await res.json();
+
+            if (res.ok && (data.status === "removed" || data.status === "not_in_favourites")) {
+                if (!favouriteDeals.includes(String(deal.id))) { // keep consistent
+                    favouriteDeals.push(String(deal.id));
+                }
+            }
+            
+            
+            addToast("Removed from favourites", "success");
+
+
+        } catch (err) {
+            
+            console.error("Failed to remove favourite:", err);
+            addToast("Failed to remove favourite: " + err, "error");
         }
     }
 
@@ -448,6 +508,8 @@
                 nickname: decoded.nickname || decoded.preferred_username,
                 idToken
             });
+            loadFavourites();
+            loadFavouritesMemory();
         }
     });
 
@@ -891,6 +953,8 @@
 
             {#if favouritesSelected}
 
+                
+
         
 
                 {#if favouriteDeals.length === 0}
@@ -900,20 +964,38 @@
                 {/if}
 
                 {#each favouriteDeals as deal}
-                    <a href={`/product/${deal.id}`} 
-                    class="bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer"
-                    on:click|preventDefault={() => openProduct(deal)}>
+
+                    <div class="relative bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer">
+
+                        <button
+                        class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
+                        on:click|stopPropagation={() => {removeFavourite(deal); favouriteDeals = favouriteDeals.filter(d => d.id !== deal.id); favouriteDealsMemory = favouriteDealsMemory.filter(id => id !== String(deal.id));}}
+                        aria-label="Add to favourites"
+                        >
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
+                            </svg>
+                        </button>
                     
-                        <img
-                            src={getThumbUrl(deal.image)}
-                            alt={deal.title}
-                            class="w-24 h-24 object-contain mb-3 rounded"
-                            on:error={(e) => (e.currentTarget.src = '/bg.svg')}
-                        />
-                        <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
-                        <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
-                        <p class="text-gray-500 text-sm">{deal.store}</p>
-                    </a>
+                        <a href={`/product/${deal.id}`} 
+                        class="flex flex-col items-center"
+                        on:click|preventDefault={() => openProduct(deal)}>
+
+                            <img
+                                src={getThumbUrl(deal.image)}
+                                alt={deal.title}
+                                class="w-24 h-24 object-contain mb-3 rounded"
+                                on:error={(e) => (e.currentTarget.src = '/bg.svg')}
+                            />
+                            <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
+                            <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
+                            <p class="text-gray-500 text-sm">{deal.store}</p>
+                        </a>
+
+                    </div>
+
+                    
                 {/each}
 
             {:else}
@@ -923,23 +1005,34 @@
 
                         <!-- Star button -->
                         {#if $user}
-                            <button
+                            
+                            {#if favouriteDealsMemory.includes(deal.id)}
+
+                                <button
                                 class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
-                                on:click|stopPropagation={() => addFavourite(deal)}
+                                on:click|stopPropagation={() => {removeFavourite(deal)}}
                                 aria-label="Add to favourites"
-                            >
-                                {#if favouriteDealsMemory.includes(deal.id)}
-                                    <!-- Filled star -->
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
-                                    </svg>
-                                {:else}
-                                    <!-- Empty star -->
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
-                                    </svg>
-                                {/if}
-                            </button>
+                                >
+                                <!-- Filled star -->
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
+                                </svg>
+                                </button>
+                            {:else}
+
+                                <button
+                                class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
+                                on:click|stopPropagation={() => {addFavourite(deal)}}
+                                aria-label="Add to favourites"
+                                >
+                                
+                                <!-- Empty star -->
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 .587l3.668 7.431L24 9.753l-6 5.853 1.42 8.294L12 18.896 4.58 23.9 6 15.606 0 9.753l8.332-1.735z"/>
+                                </svg>
+                                </button>
+                            {/if}
+                           
                         {/if}
                         {#if !$user}
                             <button
@@ -1228,7 +1321,7 @@
                         <button
                                 class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-red-700 transition font-semibold"
                                 type="button"
-                                on:click={() => { logout(); addToast('Logged out successfully', 'info');}}
+                                on:click={() => { logout(); addToast('Logged out successfully', 'info'); location.reload();}}
                             >
                                 Log out
                         </button>

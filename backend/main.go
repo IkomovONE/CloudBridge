@@ -39,11 +39,6 @@ var products = []Product{
 	{ID: "3", Name: "Headphones Z", Price: 89.90},
 }
 
-type FavouriteRequest struct {
-	UserID string `json:"user_id"`
-	DealID string `json:"deal_id"`
-}
-
 // cachedProducts will be populated once at startup from DynamoDB
 var cachedProducts []FullProduct
 
@@ -178,6 +173,104 @@ func main() {
 		}
 
 		if err := c.BindJSON(&body); err != nil || body.UserId == "" || body.DealId == "" {
+
+			c.JSON(400, gin.H{"error": "missing userId or dealId"})
+			return
+		}
+
+		userId := body.UserId
+		dealId := body.DealId
+
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-north-1"))
+		if err != nil {
+			c.JSON(500, gin.H{"error": "aws config error"})
+
+			return
+		}
+
+		svc := dynamodb.NewFromConfig(cfg)
+
+		// 1. Fetch user's current favourites
+		out, err := svc.GetItem(context.TODO(), &dynamodb.GetItemInput{
+			TableName: aws.String("Favourites"),
+			Key: map[string]types.AttributeValue{
+				"user_id": &types.AttributeValueMemberS{Value: userId},
+			},
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+
+			return
+		}
+
+		// 2. Struct that EXACTLY matches DynamoDB
+		var fav struct {
+			UserID string   `dynamodbav:"user_id"`
+			FavIDs []string `dynamodbav:"fav_ids"`
+		}
+
+		// 3. If item exists, unmarshal it
+		if out.Item != nil {
+			if err := attributevalue.UnmarshalMap(out.Item, &fav); err != nil {
+				c.JSON(500, gin.H{"error": "failed to unmarshal favourite item"})
+
+				return
+			}
+		} else {
+			// Create new item
+			fav.UserID = userId
+			fav.FavIDs = []string{}
+		}
+
+		// 4. Check if already added
+		for _, id := range fav.FavIDs {
+			if id == dealId {
+				c.JSON(200, gin.H{
+					"userId":            userId,
+					"favouriteProducts": fav.FavIDs,
+					"status":            "already_in_favourites",
+				})
+				return
+			}
+		}
+
+		// 5. Add deal to list
+		fav.FavIDs = append(fav.FavIDs, dealId)
+
+		// 6. Marshal back to DynamoDB format
+		item, err := attributevalue.MarshalMap(fav)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to marshal favourite item"})
+
+			return
+		}
+
+		// 7. Save updated item
+		_, err = svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
+			TableName: aws.String("Favourites"),
+			Item:      item,
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+
+			return
+		}
+
+		// 8. Respond
+		c.JSON(200, gin.H{
+			"userId":            userId,
+			"favouriteProducts": fav.FavIDs,
+			"status":            "added",
+		})
+	})
+
+	r.PUT("/removefavourite", func(c *gin.Context) {
+		var body struct {
+			UserId string `json:"userId"`
+			DealId string `json:"dealId"`
+		}
+
+		if err := c.BindJSON(&body); err != nil || body.UserId == "" || body.DealId == "" {
 			c.JSON(400, gin.H{"error": "missing userId or dealId"})
 			return
 		}
@@ -193,7 +286,7 @@ func main() {
 
 		svc := dynamodb.NewFromConfig(cfg)
 
-		// First, get the current fav_ids
+		// 1. Fetch user's current favourites
 		out, err := svc.GetItem(context.TODO(), &dynamodb.GetItemInput{
 			TableName: aws.String("Favourites"),
 			Key: map[string]types.AttributeValue{
@@ -205,52 +298,75 @@ func main() {
 			return
 		}
 
-		var favIds []string
-		if out.Item != nil {
-			if v, ok := out.Item["fav_ids"]; ok {
-				if l, ok := v.(*types.AttributeValueMemberL); ok {
-					for _, item := range l.Value {
-						if s, ok := item.(*types.AttributeValueMemberS); ok {
-							favIds = append(favIds, s.Value)
-						}
-					}
-				}
-			}
+		// 2. Struct that EXACTLY matches DynamoDB
+		var fav struct {
+			UserID string   `dynamodbav:"user_id"`
+			FavIDs []string `dynamodbav:"fav_ids"`
 		}
 
-		// If already present
-		for _, id := range favIds {
-			if id == dealId {
-				c.JSON(200, gin.H{"userId": userId, "favouriteProducts": favIds, "status": "already_in_favourites"})
-				return
-			}
-		}
-
-		// Append new dealId
-		favIds = append(favIds, dealId)
-
-		av, err := attributevalue.MarshalList(favIds)
-		if err != nil {
-			c.JSON(500, gin.H{"error": "failed to marshal fav_ids"})
+		// 3. If no item -> nothing to remove
+		if out.Item == nil {
+			c.JSON(200, gin.H{
+				"userId":            userId,
+				"favouriteProducts": []string{},
+				"status":            "not_in_favourites",
+			})
 			return
 		}
 
+		// 4. Unmarshal existing item
+		if err := attributevalue.UnmarshalMap(out.Item, &fav); err != nil {
+			c.JSON(500, gin.H{"error": "failed to unmarshal favourite item"})
+			return
+		}
+
+		// 5. Filter out the dealId
+		updated := make([]string, 0, len(fav.FavIDs))
+		removed := false
+		for _, id := range fav.FavIDs {
+			if id == dealId {
+				removed = true
+				continue
+			}
+			updated = append(updated, id)
+		}
+
+		if !removed {
+			// wasn't in list
+			c.JSON(200, gin.H{
+				"userId":            userId,
+				"favouriteProducts": fav.FavIDs,
+				"status":            "not_in_favourites",
+			})
+			return
+		}
+
+		// 6. Prepare struct to save back (same shape)
+		fav.FavIDs = updated
+
+		// 7. Marshal back to DynamoDB format
+		item, err := attributevalue.MarshalMap(fav)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to marshal favourite item"})
+			return
+		}
+
+		// 8. Save updated item
 		_, err = svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
 			TableName: aws.String("Favourites"),
-			Item: map[string]types.AttributeValue{
-				"user_id": &types.AttributeValueMemberS{Value: userId},
-				"fav_ids": &types.AttributeValueMemberL{Value: av},
-			},
+			Item:      item,
 		})
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.JSON(200, gin.H{"userId": userId, "addedFavourite": dealId, "status": "added"})
-	})
-	r.PUT("/removefavourite", func(c *gin.Context) {
-		c.JSON(200, products)
+		// 9. Respond
+		c.JSON(200, gin.H{
+			"userId":            userId,
+			"favouriteProducts": fav.FavIDs,
+			"status":            "removed",
+		})
 	})
 
 	r.Run(":8080") // listen on http://localhost:8080
