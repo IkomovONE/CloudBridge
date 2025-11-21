@@ -30,6 +30,34 @@
     let deals: Deal[] = [];
     let loading = false;
     let loadError: string | null = null;
+    let search = '';
+    let suggestions = [];
+
+    $: {
+        const q = search.trim().toLowerCase();
+        if (!q) {
+            suggestions = [];
+        } else {
+            suggestions = deals
+                .filter((d) =>
+                    d.title.toLowerCase().includes(q) ||
+                    d.store.toLowerCase().includes(q)
+                )
+                .slice(0, 5);
+        }
+    }
+
+    $: filteredDeals = deals.filter((deal) => {
+        const q = search.trim().toLowerCase();
+        if (!q) return true;
+
+        return (
+            deal.title.toLowerCase().includes(q) ||
+            deal.store.toLowerCase().includes(q) ||
+            deal.category?.toLowerCase().includes(q) ||
+            (deal.description && deal.description.toLowerCase().includes(q))
+        );
+    });
 
     async function loadProducts() {
         loading = true;
@@ -57,7 +85,7 @@
     }
 
     let gridRef: HTMLDivElement | null = null;
-    let search = '';
+    
 
     type Deal = {
         id: string;
@@ -66,6 +94,7 @@
         description?: string;
         store: string;
         image: string;
+        category?: string;
     };
 
     let selectedProduct: Deal | null = null;
@@ -111,6 +140,17 @@
     function openProduct(product: Deal) {
         selectedProduct = product;
     }
+
+    function handleClickOutside(e) {
+        if (!e.target.closest(".search-box")) {
+            suggestions = [];
+        }
+    }
+
+    onMount(() => {
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
+    });
 
     
     function closeModal() {
@@ -162,6 +202,10 @@
     function nextImage() {
         if (!imageSlides.length) return;
         currentImageIndex = (currentImageIndex + 1) % imageSlides.length;
+    }
+
+    function closeSuggestions() {
+        suggestions = [];
     }
 
     // helper: build thumbnail URL from backend image field (backend returns base id like "iphone16")
@@ -863,6 +907,7 @@
                             selectedCategory = null;
                             scrollToGrid();
                             favouritesSelected= false;
+                            search = '';
                         }}
                     >
                         Reset filter
@@ -881,17 +926,50 @@
                 <p class="text-left text-gray-600 mb-20">Find the hottest electronics deals – all in one place!</p>
 
                 <!-- Search section -->
-                <div class="mb-2 mt-8">
-                    <p class="text-left text-lg font-medium mb-2">Search whatever you wish</p>
-                    <div>
-                        <input
-                            type="text"
-                            bind:value={search}
-                            placeholder="Search for products, brands, stores..."
-                            class="w-full max-w-3xl text-xl px-6 py-4 rounded-lg border-2 border-blue-400 focus:outline-none focus:border-blue-600 shadow"
-                        />
+                <div class="search-box relative">
+
+                    <div class="mb-2 mt-8">
+                        <p class="text-left text-lg font-medium mb-2">Search whatever you wish</p>
+                        <div>
+                            <input
+                                type="text"
+                                bind:value={search}
+                                on:keydown={async (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                    suggestions = [];
+                                    favouritesSelected = false;
+                                    scrollToGrid();}
+                                }}
+                                placeholder="Search for products, brands, stores..."
+                                class="w-full max-w-3xl text-xl px-6 py-4 rounded-lg border-2 border-blue-400 focus:outline-none focus:border-blue-600 shadow"
+                            />
+                        </div>
                     </div>
+
+
+
                 </div>
+                
+                {#if suggestions.length > 0}
+                    <div class="absolute mt-0 w-full max-w-2xl bg-white shadow rounded-lg border">
+                        {#each suggestions as s}
+                            <div
+                                class="px-4 py-2 hover:bg-blue-100 cursor-pointer flex gap-3 items-center"
+                                on:click={() => {
+                                    search = s.title;
+                                    suggestions = [];
+                                    openProduct(s);
+                                }}
+                            >
+                                <img src={getThumbUrl(s.image)} class="w-10 h-10 rounded object-contain" />
+                                <div>
+                                    <p class="font-medium">{s.title}</p>
+                                    <p class="text-sm text-gray-500">{s.store}</p>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
                 <p class="text-left text-gray-500 mt-3 mb-4">or pick the category</p>
 
                 <div class="flex flex-wrap gap-2 mb-2">
@@ -1000,7 +1078,9 @@
 
             {:else}
 
-                {#each deals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
+               
+
+                {#each filteredDeals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
                     <div class="relative bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer">
 
                         <!-- Star button -->
@@ -1010,7 +1090,7 @@
 
                                 <button
                                 class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
-                                on:click|stopPropagation={() => {removeFavourite(deal)}}
+                                on:click|stopPropagation={() => {removeFavourite(deal); favouriteDealsMemory = favouriteDealsMemory.filter(id => id !== String(deal.id));}}
                                 aria-label="Add to favourites"
                                 >
                                 <!-- Filled star -->
