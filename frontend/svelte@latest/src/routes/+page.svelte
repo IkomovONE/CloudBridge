@@ -4,9 +4,31 @@
     import { writable } from 'svelte/store';
     import { addToast } from '$lib/toastStore';
 	import { refreshAll } from '$app/navigation';
+	import { resolveRoute } from '$app/paths';
 	
     
+    
 
+    function disableScroll() {
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = "hidden";
+        }
+    }
+
+    function enableScroll() {
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = "";
+        }
+    }
+
+
+    $: {
+        if (selectedProduct) {
+            disableScroll();   // modal opened
+        } else {
+            enableScroll();    // modal closed
+        }
+    }
 
     const categories = [
         'Phones',
@@ -59,6 +81,16 @@
         );
     });
 
+    onMount(() => {
+        if (selectedProduct) {
+            document.body.style.overflow = "hidden"; // disable background scrolling
+        }
+
+        return () => {
+            document.body.style.overflow = "auto"; // re-enable when unmounted
+        };
+    });
+
     async function loadProducts() {
         loading = true;
         loadError = null;
@@ -74,7 +106,11 @@
                 store: item.store ?? '',
                 image: item.image ?? '/bg.svg',
                 category: item.category ?? '',
-                description: item.description ?? ''
+                description: item.description ?? '',
+                rating: item.rating ?? '',
+                special: item.special ?? '',
+                color: item.color ?? '',
+                link: item.link ?? ''
             }));
         } catch (err: any) {
             loadError = err?.message ?? 'Failed to load products';
@@ -95,6 +131,10 @@
         store: string;
         image: string;
         category?: string;
+        rating?: number;
+        link?: string;
+        special?: string;
+        color?: string;
     };
 
     let selectedProduct: Deal | null = null;
@@ -182,6 +222,8 @@
 
     const S3_BASE = 'https://cloudbridge-pictures.s3.amazonaws.com/';
 
+    const S3_BASE_LOGOS = 'https://cloudbridge-store-logos.s3.eu-north-1.amazonaws.com/';
+
     // build exactly 3 candidate URLs from backend base id like "iphone16"
     function buildImageSlidesFromId(id?: string): string[] {
         if (!id) return ['/bg.svg'];
@@ -189,8 +231,20 @@
         return [1, 2, 3].map(i => `${S3_BASE}${base}_${i}.png`);
     }
 
+    function buildLogoFromId(store?: string): string {
+    if (!store) return "/bg.svg";
+
+    const storeName = store.trim().toLowerCase().replace(/\.png$/i, "");
+
+    return S3_BASE_LOGOS + storeName + ".png";
+}
+
+
+
+
     // reactive slides derived from selectedProduct.image (which is a base id)
     $: imageSlides = selectedProduct ? buildImageSlidesFromId(selectedProduct.image) : [];
+    $: storeLogo = selectedProduct ? buildLogoFromId(selectedProduct.store) : "";
     $: if (selectedProduct) currentImageIndex = 0;
 
     let currentImageIndex = 0;
@@ -581,17 +635,51 @@
       object-fit: contain;
       display: block;
     }
-    .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 50;
-    }
+    
 
-    .modal-content {
+    .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    
+}
+
+
+  .modal-content {
+    max-height: 90vh;      /* allow it to fit screen */
+    overflow: hidden;      /* enable scrolling */
+    background: white;
+    border-radius: 12px;
+    padding-top: 50px;
+    padding-left: 1px;
+    padding-right: 1px;
+    
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    gap: 40px;
+    width: 90%;
+    box-shadow: 0 12px 40px rgba(2,6,23,0.12);
+}
+
+.modal-backdrop-profile {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    
+}
+
+.modal-content-profile {
     background: white;
     padding: 1.5rem;
     border-radius: 1rem;
@@ -602,7 +690,40 @@
     gap: 1.5rem;
     position: relative;
     box-shadow: 0 12px 40px rgba(2,6,23,0.12);
-  }
+}
+
+
+.modal-scroll {
+    overflow-y: auto;       
+    padding: 24px;
+    width: 100%;
+    flex: 1;
+    border-radius: 20px;
+    display: flex;
+    gap: 40px;
+    flex-direction: column;
+    
+}
+
+.modal-basic-info {
+    overflow-y: auto;       
+    padding: 24px;
+    width: 100%;
+    flex: 1;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+     
+}
+
+    .scroll-spacer {
+        height: 40px;   /* or 64px, whatever feels good */
+        width: 100px;
+        
+    }
+    
+
+
 
   /* larger, fixed-ish image area that preserves aspect ratio */
   .modal-image {
@@ -616,6 +737,34 @@
 
   /* details column stretches and wraps nicely */
   .modal-details {
+    flex-direction: row;
+    justify-content: center;
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .store-logo {
+    width: 100px;
+    height: auto;
+    object-fit: contain;
+    opacity: 0.9;
+    margin-top: 6px;    
+}
+
+    .store-link {
+        color: #3d4658;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+    }
+
+    .store-link:hover {
+        color: #5376be;
+        
+    }
+
+  .modal-details-profile {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -641,27 +790,104 @@
 
     .modal-details h1 {
         margin: 0 0 0.5rem 0;
-        font-size: 1.5rem;
+        font-size: 2rem;
         font-weight: bold;
     }
+    .modal-scroll h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+
+    .price {
+        color: #555;
+    }
+
+    .star-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 8px 0 12px 0;
+    }
+
+    .star {
+        width: 22px;
+        height: 22px;
+        fill: #e5e7eb; /* default gray */
+    }
+
+    .star.full {
+        fill: #facc15; /* yellow */
+    }
+
+    .star.half {
+        fill: url(#half);
+    }
+
+    .star.empty {
+        fill: #d1d5db; /* lighter gray */
+    }
+
+    .rating-number {
+        margin-left: 6px;
+        font-size: 0.9rem;
+        color: #555;
+    }
+
+    :global(.description h2) {
+        font-size: 1.5rem;      /* bigger */
+        font-weight: 700;
+        margin-top: 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    :global(.description p) {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 0.5rem;
+    }
+
+    
+    :global(.description ul) {
+        margin: 1rem 0;
+        padding-left: 1.5rem;
+    }
+
+    :global(.description li) {
+        margin-bottom: 0.5rem;
+    }
+
+    :global(.description strong) {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+
     .modal-details .price {
         color: #2563eb;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .modal-details .color {
+        color: #515869;
+        font-size: 1.2rem;
+        font-weight: 500;
         margin-bottom: 0.5rem;
     }
     .modal-details .store {
         color: #888;
-        font-size: 1rem;
+        font-size: 1.2rem;
         margin-bottom: 1rem;
     }
     .close-btn {
         position: absolute;
-        top: 1rem;
-        right: 1rem;
+        top: 8px;
+        right: 20px;
         background: transparent;
         border: none;
-        font-size: 2rem;
+        font-size: 2.3rem;
         color: #888;
         cursor: pointer;
         transition: color 0.2s;
@@ -1067,7 +1293,7 @@
                                 on:error={(e) => (e.currentTarget.src = '/bg.svg')}
                             />
                             <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
-                            <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
+                            <p class="text-blue-600 font-bold mb-1">{deal.price}€</p>
                             <p class="text-gray-500 text-sm">{deal.store}</p>
                         </a>
 
@@ -1140,7 +1366,7 @@
                                 on:error={(e) => (e.currentTarget.src = '/bg.svg')}
                             />
                             <h2 class="text-lg font-semibold mb-1 text-center">{deal.title}</h2>
-                            <p class="text-blue-600 font-bold mb-1">{deal.price}</p>
+                            <p class="text-blue-600 font-bold mb-1">{deal.price}€</p>
                             <p class="text-gray-500 text-sm">{deal.store}</p>
                         </a>
                     </div>
@@ -1152,51 +1378,105 @@
 
     {#if selectedProduct}
         <div class="modal-backdrop" on:click={closeModal}>
-            <div
-                class="modal-content"
-                on:click|stopPropagation
-                transition:scale={{ duration: 250, start: 0.8 }}
-            >
-                <!-- NEW: image carousel (left) -->
-                <div class="carousel">
-                    <button class="carousel-btn left" on:click={prevImage} aria-label="Previous image">‹</button>
-
-                    <div class="carousel-view" role="list">
-                      {#each imageSlides as src, idx}
-                        <img
-                          role="listitem"
-                          alt={`${selectedProduct.title} (${idx + 1})`}
-                          src={src}
-                          class:selected={idx === currentImageIndex}
-                          on:error={(e) => (e.currentTarget.src = '/bg.svg')}
-                          loading="lazy"
-                        />
-                      {/each}
-                    </div>
-
-                    <button class="carousel-btn right" on:click={nextImage} aria-label="Next image">›</button>
-
-                    <!-- small indicators -->
-                    <div class="carousel-indicators">
-                      {#each imageSlides as _, idx}
-                        <button
-                          class="indicator {idx === currentImageIndex ? 'active' : ''}"
-                          on:click={() => (currentImageIndex = idx)}
-                          aria-label={"Show image " + (idx + 1)}
-                        />
-                      {/each}
-                    </div>
-                </div>
-
-                <!-- details (right) -->
-                <div class="modal-details">
-                    <h1>{selectedProduct.title}</h1>
-                    <p class="price">{selectedProduct.price}</p>
-                    <p class="store">{selectedProduct.store}</p>
-                    <p class="mt-2 text-sm text-gray-600">{selectedProduct.description}</p>
-                </div>
-
+            <div class="modal-content" on:click|stopPropagation transition:scale={{ duration: 250, start: 0.8 }}>
+                
+                <!-- CLOSE BUTTON -->
                 <button class="close-btn" on:click={closeModal}>×</button>
+
+                <!-- SCROLLABLE CONTAINER -->
+                <div class="modal-scroll">
+
+                   
+                    
+
+                    <!-- DETAILS -->
+                    <div class="modal-details">
+
+                        <div class="carousel">
+                            <button class="carousel-btn left" on:click={prevImage}>‹</button>
+
+                            <div class="carousel-view">
+                                {#each imageSlides as src, idx}
+                                    <img 
+                                        src={src}
+                                        class:selected={idx === currentImageIndex}
+                                        on:error={(e) => (e.currentTarget.src = '/bg.svg')}
+                                    />
+                                {/each}
+                            </div>
+
+                            <button class="carousel-btn right" on:click={nextImage}>›</button>
+
+                            <div class="carousel-indicators">
+                                {#each imageSlides as _, idx}
+                                    <button 
+                                    class="indicator {idx === currentImageIndex ? 'active' : ''}"
+                                    on:click={() => currentImageIndex = idx}
+                                    />
+                                {/each}
+                            </div>
+                        </div>
+
+                        <div class="scroll-spacer"></div>
+
+                        <div class="modal-basic-info">
+
+                            <h1>{selectedProduct.title}</h1>
+
+                            <p class="color">{selectedProduct.color} - {selectedProduct.special}</p>
+                            
+                            <div class="star-rating">
+                                {#each Array(5) as _, i}
+                                    {#if selectedProduct.rating >= i + 1}
+                                        <!-- full star -->
+                                        <svg class="star full" viewBox="0 0 24 24">
+                                            <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.79 1.52 8.258L12 18.897l-7.456 4.457 1.52-8.257L0 9.306l8.332-1.151L12 .587z"/>
+                                        </svg>
+                                    {:else if selectedProduct.rating > i && selectedProduct.rating < i + 1}
+                                        <!-- half star -->
+                                        <svg class="star half" viewBox="0 0 24 24">
+                                            <defs>
+                                                <linearGradient id="half">
+                                                    <stop offset="50%" stop-color="#facc15"/>
+                                                    <stop offset="50%" stop-color="#e5e7eb"/>
+                                                </linearGradient>
+                                            </defs>
+                                            <path fill="url(#half)" d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.79 1.52 8.258L12 18.897l-7.456 4.457 1.52-8.257L0 9.306l8.332-1.151L12 .587z"/>
+                                        </svg>
+                                    {:else}
+                                        <!-- empty star -->
+                                        <svg class="star empty" viewBox="0 0 24 24">
+                                            <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.79 1.52 8.258L12 18.897l-7.456 4.457 1.52-8.257L0 9.306l8.332-1.151L12 .587z"/>
+                                        </svg>
+                                    {/if}
+                                {/each}
+
+                                <span class="rating-number">{selectedProduct.rating}</span>
+                            </div>
+                            <p class="price">{selectedProduct.price}€</p>
+                            <img class="store-logo" src={storeLogo}/>
+                            <a href={selectedProduct.link} class="store-link" target="_blank" rel="noopener noreferrer">Go to store page</a>
+
+
+
+                        </div>
+
+                        
+                        
+                        
+                    </div>
+
+                    <p></p>
+
+                    <h1>About the product</h1>
+
+                    <div class="description mt-2"> {@html selectedProduct.description}</div>
+
+                    
+                    
+
+                </div>
+                
             </div>
         </div>
     {/if}
@@ -1207,7 +1487,7 @@
         {#if accountCardSelected}
             <!-- show login/register modal only if NOT logged in -->
             <div
-                class="modal-backdrop"
+                class="modal-backdrop-profile"
                 role="button"
                 tabindex="0"
                 aria-label="Close modal"
@@ -1229,7 +1509,7 @@
                 
             >
                 <div
-                    class="modal-content"
+                    class="modal-content-profile"
                     role="dialog"
                     aria-modal="true"
                     tabindex="0"
@@ -1259,7 +1539,7 @@
                                 Register
                             </button>
                         </div>
-                        <div class="modal-details" style="align-items: stretch;">
+                        <div class="modal-details-profile" style="align-items: stretch;">
                             <h1 class="mb-4 text-xl font-bold text-center">{accountMode === 'login' ? 'Login' : 'Register'}</h1>
                             <label class="mb-2 text-sm font-medium">E-mail</label>
                             <input
@@ -1310,7 +1590,7 @@
 
                     <!-- VERIFY STEP (code entry) -->
                     {#if registerStep === 'verify'}
-                        <div class="modal-details" style="align-items: stretch;">
+                        <div class="modal-details-profile" style="align-items: stretch;">
                             <h1 class="mb-4 text-xl font-bold text-center">Verify Email</h1>
                             <p class="text-sm text-gray-600 mb-4">We sent a code to <strong>{pendingEmail}</strong></p>
                             <label class="mb-2 text-sm font-medium">Confirmation Code</label>
@@ -1354,7 +1634,7 @@
         <!-- show profile modal only if logged in -->
             {#if profileStep === 'none'}
                 <div
-                    class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+                    class="modal-backdrop-profile fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
                     role="button"
                     tabindex="0"
                     aria-label="Close modal"
@@ -1362,7 +1642,7 @@
                     on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
                 >
                     <div
-                        class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
+                        class="modal-content-profile bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
                         role="dialog"
                         aria-modal="true"
                         tabindex="0"
@@ -1410,7 +1690,7 @@
                 {/if}
             {#if profileStep === 'password'}
                 <div
-                    class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+                    class="modal-backdrop-profile fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
                     role="button"
                     tabindex="0"
                     aria-label="Close modal"
@@ -1418,7 +1698,7 @@
                     on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { profileCardSelected = false; } }}
                 >
                     <div
-                        class="modal-content bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
+                        class="modal-content-profile bg-white rounded-lg p-6 flex flex-col gap-4 shadow-lg"
                         role="dialog"
                         aria-modal="true"
                         tabindex="0"

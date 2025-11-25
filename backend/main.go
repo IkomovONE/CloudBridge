@@ -23,13 +23,17 @@ type Product struct {
 
 // new type that matches the fields used in frontend
 type FullProduct struct {
-	ID          string `json:"id" dynamodbav:"id"`
-	Title       string `json:"title" dynamodbav:"title"`
-	Price       string `json:"price" dynamodbav:"price"`
-	Store       string `json:"store" dynamodbav:"store"`
-	Image       string `json:"image" dynamodbav:"image"`
-	Category    string `json:"category" dynamodbav:"category"`
-	Description string `json:"description" dynamodbav:"description"`
+	ID          string  `json:"id" dynamodbav:"id"`
+	Title       string  `json:"title" dynamodbav:"title"`
+	Price       string  `json:"price" dynamodbav:"price"`
+	Store       string  `json:"store" dynamodbav:"store"`
+	Image       string  `json:"image" dynamodbav:"image"`
+	Category    string  `json:"category" dynamodbav:"category"`
+	Description string  `json:"description" dynamodbav:"description"`
+	Special     string  `json:"special" dynamodbav:"special"`
+	Color       string  `json:"color" dynamodbav:"color"`
+	Rating      float64 `json:"rating" dynamodbav:"rating"`
+	Link        string  `json:"link" dynamodbav:"link"`
 }
 
 // legacy sample products (kept for other handlers if needed)
