@@ -5,6 +5,7 @@
     import { addToast } from '$lib/toastStore';
 	import { refreshAll } from '$app/navigation';
 	import { resolveRoute } from '$app/paths';
+    import { invalidateAll } from '$app/navigation';
 	
     
     
@@ -117,6 +118,7 @@
             console.error('loadProducts error', err);
         } finally {
             loading = false;
+            deals = deals.filter(d => d.id && d.id !== "");
         }
     }
 
@@ -493,6 +495,8 @@
         const favIds = await handleFavourites();
         favouriteDeals = deals.filter(p => favIds.includes(p.id));
         favouriteDealsMemory = favIds;
+
+        favouriteDeals = favouriteDeals.filter(d => d && d.id && d.id !== "");
         
         
     }
@@ -575,12 +579,25 @@
             
             addToast("Removed from favourites", "success");
 
+            removeFromLocal(deal.id);
+
+            favouriteDeals = favouriteDeals
+                .filter(d => d && d.id && String(d.id) !== String(deal.id));
+
+            favouriteDealsMemory = favouriteDealsMemory
+                .filter(id => id && String(id) !== String(deal.id));
+
 
         } catch (err) {
             
             console.error("Failed to remove favourite:", err);
             addToast("Failed to remove favourite: " + err, "error");
         }
+    }
+
+    function removeFromLocal(id) {
+        favouriteDeals = [...favouriteDeals].filter(d => String(d.id) !== String(id));
+        favouriteDealsMemory = [...favouriteDealsMemory].filter(x => String(x) !== String(id));
     }
 
     // helper: decode JWT payload (no verification needed client-side for display)
@@ -1259,6 +1276,8 @@
 
                 
 
+                
+
         
 
                 {#if favouriteDeals.length === 0}
@@ -1269,11 +1288,11 @@
 
                 {#each favouriteDeals as deal}
 
-                    <div class="relative bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer">
+                    <div transition:fade class="relative bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer">
 
                         <button
                         class="absolute top-2 right-2 text-black hover:text-yellow-500 focus:outline-none"
-                        on:click|stopPropagation={() => {removeFavourite(deal); favouriteDeals = favouriteDeals.filter(d => d.id !== deal.id); favouriteDealsMemory = favouriteDealsMemory.filter(id => id !== String(deal.id));}}
+                        on:click|stopPropagation={() => {removeFavourite(deal); removeFromLocal(deal.id);}}
                         aria-label="Add to favourites"
                         >
                         
