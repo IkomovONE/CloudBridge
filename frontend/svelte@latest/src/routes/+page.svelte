@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { scale, fade, slide } from 'svelte/transition';
+    import { scale, fade, slide, fly } from 'svelte/transition';
     import { onMount, onDestroy } from 'svelte';
     import { writable } from 'svelte/store';
     import { addToast } from '$lib/toastStore';
 	import { refreshAll } from '$app/navigation';
 	import { resolveRoute } from '$app/paths';
-    import { invalidateAll } from '$app/navigation';
+    import RangeSlider from 'svelte-range-slider-pips';
+	import { spring } from 'svelte/motion';
 	
     
     
@@ -82,6 +83,34 @@
         );
     });
 
+    let priceRange = [0, 2000]; // default
+    let priceMin = 0;
+    let priceMax = 0;
+
+    $: maxPossiblePrice = Math.max(...deals.map(d => Number(d.price) || 0));
+
+    $: if (deals.length > 0 && priceMax === 0) {
+    priceMax = maxPossiblePrice;
+}
+
+    $: finalDeals = filteredDeals
+    // PRICE RANGE
+    .filter(d => {
+        const p = Number(d.price);
+        if (priceMin && p < priceMin) return false;
+        if (priceMax && p > priceMax) return false;
+        return true;
+    })
+    // SORTING
+    .sort((a, b) => {
+        if (sortType === "priceAsc") return Number(a.price) - Number(b.price);
+        if (sortType === "priceDesc") return Number(b.price) - Number(a.price);
+        if (sortType === "titleAsc") return a.title.localeCompare(b.title);
+        if (sortType === "titleDesc") return b.title.localeCompare(a.title);
+        if (sortType === "ratingDesc") return (b.rating || 0) - (a.rating || 0);
+        return 0;
+    });
+
     onMount(() => {
         if (selectedProduct) {
             document.body.style.overflow = "hidden"; // disable background scrolling
@@ -144,6 +173,7 @@
     let profileCardSelected: boolean | null = null;
     let selectedCategory: string | null = null;
     let showSubHeader = false;
+    let showSortMenu = false;
 
     let accountMode: 'login' | 'register' = 'login';
     let email = '';
@@ -170,6 +200,8 @@
     let oldPassword = '';
     let newPassword = '';
     let expectingConfirmation = false;
+    let sortType = "Default";
+   
 
     // add this state var
     let registerStep: 'form' | 'verify' = 'form'; 
@@ -182,6 +214,8 @@
     function openProduct(product: Deal) {
         selectedProduct = product;
     }
+
+    
 
     function handleClickOutside(e) {
         if (!e.target.closest(".search-box")) {
@@ -201,18 +235,29 @@
         profileCardSelected = false;
     }
 
+    let last = 0;
+    function throttleScroll() {
+        const now = performance.now();
+        if (now - last < 100) return;   // 100ms throttle = smooth
+        last = now;
+
+        handleScroll();
+    }
+
     function handleScroll() {
         if (!gridRef) return;
-        const rect = gridRef.getBoundingClientRect();
+        const rect = gridRef?.getBoundingClientRect();
         // Show sub-header if grid is at or above the top of the viewport
-        showSubHeader = rect.top <= 200; // 64px = header height
+        showSubHeader = rect && rect.top <= 200;
+        showSortMenu = rect && rect.top <= 200;
+
     }
 
     onMount(() => {
         // fetch products and attach scroll listener in the browser
         loadProducts();
         if (typeof window !== 'undefined') {
-            window.addEventListener('scroll', handleScroll);
+            window.addEventListener('scroll', throttleScroll);
             handleScroll();
         }
     });
@@ -649,8 +694,10 @@
     img.hero-svg {
       width: 40vw;
       height: 50vh;
+      z-index: 10;
       object-fit: contain;
       display: block;
+      position: relative;
     }
     
 
@@ -666,6 +713,34 @@
     z-index: 50;
     
 }
+
+    .grid-area {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 32px; 
+        
+    }
+
+    .grid-shift {
+        padding-left: 110px; /* or whatever looks good with your filter width */
+        transition: padding 0.25s ease;
+    }
+
+    .sorting {
+        
+        position: sticky;
+        top: 200px;
+        z-index: 60;
+        padding: 16px;                  /* p-4 */
+        border-radius: 5px;            /* rounded-xl */
+        border: 1px solid #e5e7eb;      /* border-gray-200 */
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-width: 200px;            /* w-56 */
+        display: flex;                  /* flex */
+        flex-direction: column;         /* flex-col */
+        gap: 16px;                      /* gap-4 */
+    }
 
 
   .modal-content {
@@ -722,6 +797,9 @@
     
 }
 
+
+
+
 .modal-basic-info {
     overflow-y: auto;       
     padding: 24px;
@@ -760,6 +838,8 @@
     flex: 1;
     min-width: 0;
   }
+
+  
 
   .store-logo {
     width: 100px;
@@ -877,6 +957,25 @@
     :global(.description strong) {
         font-weight: 600;
         color: #1e293b;
+    }
+
+    .subheader-wrapper {
+        position: fixed;
+        top: 64px;
+        width: 100%;
+        z-index: 40;
+        pointer-events: none;
+    }
+
+    .subheader-wrapper > div {
+        pointer-events: auto;
+    }
+
+    .sorting-wrapper {
+        position: fixed;
+        top: 200px;
+        left: 30px;
+        z-index: 60;
     }
 
 
@@ -1031,6 +1130,9 @@
     .carousel-view img { position: relative; height: 100%; }
     .carousel-btn { display: none; } /* use indicators / swipe on touch */
   }
+
+  
+
 </style>
 
 <!-- Gradient background for the whole page -->
@@ -1106,58 +1208,73 @@
     <!-- Sub-header with categories -->
     
 
-    <!-- Sub-header visible only when scrolling down -->
+    
     {#if showSubHeader}
 
-        {#if favouritesSelected}
-            <div transition:slide class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:80px;">
-                <nav class="flex gap-2 flex-wrap justify-center w-full">
-                    <span class="text-blue-700 font-semibold">
-                        Viewing {$user?.nickname}'s Favourite Deals
-                    </span>
+        <div class="subheader-wrapper">
 
-                    <button
-                        class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                        on:click={() => {
-                            selectedCategory = null;
-                            scrollToGrid();
-                            favouritesSelected = false;
-                        }}
-                    >
-                        Back to latest deals
-                    </button>
-                </nav>
+            <div transition:fade|local={{ duration: 200 }}
+                class:visible={showSubHeader}
+                class:hidden={!showSubHeader}>
+
+                {#if favouritesSelected}
+
+                    <div in:fade={{ duration: 180 }} out:fade={{ duration: 140 }} class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:80px;">
+                        <nav class="flex gap-2 flex-wrap justify-center w-full">
+                            <span class="text-blue-700 font-semibold">
+                                Viewing {$user?.nickname}'s Favourite Deals
+                            </span>
+
+                            <button
+                                class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                                on:click={() => {
+                                    selectedCategory = null;
+                                    scrollToGrid();
+                                    favouritesSelected = false;
+                                }}
+                            >
+                                Back to latest deals
+                            </button>
+                        </nav>
+                    </div>
+                {:else}
+                    <div in:fade={{ duration: 180 }} out:fade={{ duration: 140 }} class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:32px;">
+                        <nav class="flex gap-2 flex-wrap justify-center w-full">
+                            {#each categories as category}
+                                <button
+                                    class="px-3 py-1 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
+                                    class:opacity-60={selectedCategory === category}
+                                    class:font-semibold={selectedCategory === category}
+                                    on:click={() => {
+                                        selectedCategory = category;
+                                        scrollToGrid();
+                                    }}
+                                >
+                                    {category}
+                                </button>
+                            {/each}
+                            <button
+                                class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                                on:click={() => {
+                                    selectedCategory = null;
+                                    scrollToGrid();
+                                    favouritesSelected= false;
+                                    search = '';
+                                }}
+                            >
+                                Reset filter
+                            </button>
+                        </nav>
+                    </div>
+                {/if}
+
+
+
             </div>
-        {:else}
-            <div transition:slide class="fixed left-0 w-full bg-blue-50 border-b border-blue-200 flex items-center justify-center gap-2 px-6 py-2 z-40" style="top:64px; min-height:32px;">
-                <nav class="flex gap-2 flex-wrap justify-center w-full">
-                    {#each categories as category}
-                        <button
-                            class="px-3 py-1 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
-                            class:opacity-60={selectedCategory === category}
-                            class:font-semibold={selectedCategory === category}
-                            on:click={() => {
-                                selectedCategory = category;
-                                scrollToGrid();
-                            }}
-                        >
-                            {category}
-                        </button>
-                    {/each}
-                    <button
-                        class="ml-4 px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                        on:click={() => {
-                            selectedCategory = null;
-                            scrollToGrid();
-                            favouritesSelected= false;
-                            search = '';
-                        }}
-                    >
-                        Reset filter
-                    </button>
-                </nav>
-            </div>
-        {/if}
+
+        </div>
+
+        
     {/if}
 
     <!-- Main content centered, px-6 for padding, pt-20 for header space -->
@@ -1265,12 +1382,95 @@
         </div>
     </div>
 
-    <!-- Deals grid, initially below the fold -->
+    <div class="grid-area">
+
+        {#if showSortMenu && !selectedProduct}
+
+            <div class="sorting-wrapper">
+                <div transition:fade|local={{ duration: 200 }}
+                    class:visible={showSortMenu}
+                    class:hidden={!showSortMenu}>
+
+
+                    <div
+                        class="sorting"
+                        
+                        style="height: auto;"
+                    >
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">Filters</h3>
+
+                        <!-- SORT -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-sm font-semibold text-gray-700">Sort by</label>
+                            <select
+                                bind:value={sortType}
+                                class="border rounded p-2"
+                                
+                            >
+                                <option value="Default" >Default</option>
+                                <option value="priceAsc">Price: Low → High</option>
+                                <option value="priceDesc">Price: High → Low</option>
+                                <option value="titleAsc">Title A → Z</option>
+                                <option value="titleDesc">Title Z → A</option>
+                                <option value="ratingDesc">Rating: High → Low</option>
+                            </select>
+                        </div>
+
+                        <!-- PRICE RANGE -->
+                        <div class="flex flex-col gap-1">
+                            <label class="text-sm font-semibold text-gray-700">Price range</label>
+                            <RangeSlider
+                                min={0}
+                                max={2000}
+                                step={1}
+                                values={priceRange}
+                                on:change={(e) => {
+                                    priceRange = e.detail.values;
+                                    priceMin = priceRange[0];
+                                    priceMax = priceRange[1];
+                                }}
+                                spring={false}
+
+                               
+                                
+                                
+
+                                  
+
+
+                            />
+
+                            <div class="flex justify-between text-sm text-gray-600 mt-0">
+                                <span>{priceMin} €</span>
+                                <span>{priceMax} €</span>
+                            </div>
+                        </div>
+
+                        <button
+                            class="mt-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+                            on:click={() => {
+                                priceMin = 0;
+                                priceMax = 0;
+                                sortType = "Default";
+                            }}
+                        >
+                            Reset filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        {/if}
+
+        
+
         <div bind:this={gridRef} 
-        class="max-w-5xl mx-auto px-6 py-8 min-h-[80vh]" 
+        class="max-w-6xl mx-auto px-0 py-8 min-h-[80vh] grid-shift" 
         style="scroll-margin-top: 200px;"> 
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+
+            
 
             {#if favouritesSelected}
 
@@ -1325,7 +1525,7 @@
 
                
 
-                {#each filteredDeals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
+                {#each finalDeals.filter(deal => !selectedCategory || deal.category === selectedCategory) as deal}
                     <div class="relative bg-white rounded shadow p-4 flex flex-col items-center hover:shadow-lg transition cursor-pointer">
 
                         <!-- Star button -->
@@ -1394,6 +1594,13 @@
 
         </div>
     </div>
+
+
+
+    </div>
+
+    <!-- Deals grid -->
+        
 
     {#if selectedProduct}
         <div class="modal-backdrop" on:click={closeModal}>
