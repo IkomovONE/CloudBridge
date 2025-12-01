@@ -2167,7 +2167,7 @@
                 </p>
             </div>
 
-            <nav class="footer-links grid grid-cols-2 md:grid-cols-3 gap-4">
+            <nav class="footer-links grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <p class="font-semibold text-sm mb-2">Product</p>
                     <ul class="text-sm text-gray-600 space-y-1">
