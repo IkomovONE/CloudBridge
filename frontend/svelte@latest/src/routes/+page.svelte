@@ -144,7 +144,7 @@
         loading = true;
         loadError = null;
         try {
-            const res = await fetch('http://13.60.88.206:8080/products');
+            const res = await fetch('https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/products');
             if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
             const data = await res.json();
             // map backend objects to Deal shape defensively
@@ -360,7 +360,7 @@
         }
 
         try {
-            const res = await fetch('http://13.60.88.206:8080/register', {
+            const res = await fetch('https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, nickname })
@@ -387,7 +387,7 @@
 
     async function handleConfirm() {
         try {
-            const res = await fetch('http://13.60.88.206:8080/confirm', {
+            const res = await fetch('https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: pendingEmail, code: confirmationCode })
@@ -424,7 +424,7 @@
             return;
         }
 
-        const res = await fetch('http://13.60.88.206:8080/change-password', {
+        const res = await fetch('https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/change-password', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -458,7 +458,7 @@
 
     async function handleResend() {
         try {
-            const res = await fetch('http://13.60.88.206:8080/resend-confirm', {
+            const res = await fetch('https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/resend-confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: pendingEmail })
@@ -485,7 +485,7 @@
         
 
         try {
-            const res = await fetch('http://13.60.88.206:8080/login', {
+            const res = await fetch('https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -546,7 +546,7 @@
             let decodedID = decodeToken($user.idToken);
             let userId = decodedID.sub;
 
-            const res = await fetch("http://13.60.88.206:8080/favourites", {
+            const res = await fetch("https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/favourites", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId })  // <-- FIXED
@@ -586,7 +586,7 @@
 
             
 
-            const res = await fetch("http://13.60.88.206:8080/addfavourite", {
+            const res = await fetch("https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/addfavourite", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -627,7 +627,7 @@
 
             
 
-            const res = await fetch("http://13.60.88.206:8080/removefavourite", {
+            const res = await fetch("https://iztmzm173h.execute-api.eu-north-1.amazonaws.com/prod/removefavourite", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
