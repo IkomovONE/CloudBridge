@@ -7,6 +7,7 @@
 	import { resolveRoute } from '$app/paths';
     import RangeSlider from 'svelte-range-slider-pips';
 	import { spring } from 'svelte/motion';
+    import { goto } from '$app/navigation';
 	
     
     
@@ -143,7 +144,7 @@
         loading = true;
         loadError = null;
         try {
-            const res = await fetch('http://localhost:8080/products');
+            const res = await fetch('http://16.171.3.179:8080/products');
             if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
             const data = await res.json();
             // map backend objects to Deal shape defensively
@@ -359,7 +360,7 @@
         }
 
         try {
-            const res = await fetch('http://localhost:8080/register', {
+            const res = await fetch('http://16.171.3.179:8080/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, nickname })
@@ -386,7 +387,7 @@
 
     async function handleConfirm() {
         try {
-            const res = await fetch('http://localhost:8080/confirm', {
+            const res = await fetch('http://16.171.3.179:8080/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: pendingEmail, code: confirmationCode })
@@ -423,7 +424,7 @@
             return;
         }
 
-        const res = await fetch('http://localhost:8080/change-password', {
+        const res = await fetch('http://16.171.3.179:8080/change-password', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -457,7 +458,7 @@
 
     async function handleResend() {
         try {
-            const res = await fetch('http://localhost:8080/resend-confirm', {
+            const res = await fetch('http://16.171.3.179:8080/resend-confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: pendingEmail })
@@ -484,7 +485,7 @@
         
 
         try {
-            const res = await fetch('http://localhost:8080/login', {
+            const res = await fetch('http://16.171.3.179:8080/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -545,7 +546,7 @@
             let decodedID = decodeToken($user.idToken);
             let userId = decodedID.sub;
 
-            const res = await fetch("http://localhost:8080/favourites", {
+            const res = await fetch("http://16.171.3.179:8080/favourites", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId })  // <-- FIXED
@@ -585,7 +586,7 @@
 
             
 
-            const res = await fetch("http://localhost:8080/addfavourite", {
+            const res = await fetch("http://16.171.3.179:8080/addfavourite", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -626,7 +627,7 @@
 
             
 
-            const res = await fetch("http://localhost:8080/removefavourite", {
+            const res = await fetch("http://16.171.3.179:8080/removefavourite", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -1246,7 +1247,27 @@
     .carousel-btn { display: none; } /* use indicators / swipe on touch */
   }
 
-  
+  /* footer styles */
+  .site-footer {
+    border-top: 1px solid rgba(0,0,0,0.06);
+    background: linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
+  }
+  .site-footer-inner {
+    align-items: flex-start;
+  }
+  .site-footer .footer-brand p {
+    color: #475569;
+  }
+  .site-footer .footer-links a {
+    color: #475569;
+  }
+  .site-footer .footer-links a:hover {
+    color: #1d4ed8;
+  }
+  @media (max-width: 768px) {
+    .site-footer-inner { padding-top: 24px; padding-bottom: 24px; }
+    .footer-links { grid-template-columns: repeat(2,1fr); }
+  }
 
 </style>
 
@@ -1276,12 +1297,7 @@
         <button
             class="px-3 py-1 fixed left-70 text-sm rounded transition border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900"
         
-            on:click={() => {
-                selectedCategory = null;
-                scrollToGrid();
-                favouritesSelected= false;
-                
-            }}
+            on:click={() => goto('/about')}
         >
             About
         </button>
@@ -2139,15 +2155,49 @@
             
         {/if} <!-- profileCardSelected -->
 
-        
-   
+    {/if} <!-- $user -->
     
+    <!-- FOOTER -->
+    <footer class="site-footer mt-12">
+        <div class="site-footer-inner max-w-8xl mx-auto px-6 py-8 flex flex-col md:flex-row gap-6 items-start justify-between">
+            <div class="footer-brand">
+                <div class="text-2xl font-extrabold text-blue-700">CloudBridge</div>
+                <p class="text-sm text-gray-600 mt-2 max-w-sm">
+                    Aggregating the best tech deals in Finland. Built as a student project.
+                </p>
+            </div>
 
-    <div class="account-info text-center mt-4">
-        <p>Logged in as: <strong>{$user.email}</strong></p>
-        <p>Nickname: <strong>{$user.nickname}</strong></p>
-    </div>
-{/if} <!-- outer if -->
+            <nav class="footer-links grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                    <p class="font-semibold text-sm mb-2">Product</p>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><a href="/" class="hover:underline">Home</a></li>
+                        <li><a href="/about" class="hover:underline">About</a></li>
+                        <li><a href="#" on:click={(e) => { e.preventDefault(); scrollToGrid(); }} class="hover:underline">Latest deals</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm mb-2">Support</p>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><a href="#" class="hover:underline">Contact</a></li>
+                        <li><a href="#" class="hover:underline">FAQ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm mb-2">Legal</p>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><a href="#" class="hover:underline">Privacy</a></li>
+                        <li><a href="#" class="hover:underline">Terms</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div class="footer-meta text-sm text-gray-600">
+                <p>Built by Daniil Komov & Umandi Sachini</p>
+                <p class="mt-2">&copy; {new Date().getFullYear()} CloudBridge</p>
+            </div>
+        </div>
+    </footer>
 </div>
 
 
