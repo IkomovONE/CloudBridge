@@ -2179,8 +2179,7 @@
                 <div>
                     <p class="font-semibold text-sm mb-2">Support</p>
                     <ul class="text-sm text-gray-600 space-y-1">
-                        <li><a href="#" class="hover:underline">Contact</a></li>
-                        <li><a href="#" class="hover:underline">FAQ</a></li>
+                        <li><a href="mailto:daniil.komov@icloud.com" class="hover:underline">Contact</a></li>
                     </ul>
                 </div>
                 <div>
@@ -2188,6 +2187,18 @@
                     <ul class="text-sm text-gray-600 space-y-1">
                         <li><a href="#" class="hover:underline">Privacy</a></li>
                         <li><a href="#" class="hover:underline">Terms</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm mb-2">Account</p>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        {#if !$user}
+                            <li><a href="#" on:click={(e) => { e.preventDefault(); accountCardSelected = true; }} class="hover:underline">Login / Register</a></li>
+                        {:else}
+                            <li><a href="#" on:click={(e) => { e.preventDefault(); favouritesSelected = true; scrollToGrid();}} class="hover:underline">Favourites</a></li>
+                            <li><a href="#" on:click={() => {accountCardSelected= true; profileStep = 'password'; showPassword = false; oldPassword = ''; newPassword = '';}} class="hover:underline">Change password</a></li>
+                            <li><a href="#" on:click={() => { logout(); addToast('Logged out successfully', 'info'); location.reload();}} class="hover:underline">Log out</a></li>
+                        {/if}
                     </ul>
                 </div>
             </nav>
