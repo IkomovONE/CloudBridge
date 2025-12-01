@@ -2195,8 +2195,8 @@
                         {#if !$user}
                             <li><a href="#" on:click={(e) => { e.preventDefault(); accountCardSelected = true; }} class="hover:underline">Login / Register</a></li>
                         {:else}
-                            <li><a href="#" on:click={(e) => { e.preventDefault(); favouritesSelected = true; scrollToGrid();}} class="hover:underline">Favourites</a></li>
-                            <li><a href="#" on:click={() => {accountCardSelected= true; profileStep = 'password'; showPassword = false; oldPassword = ''; newPassword = '';}} class="hover:underline">Change password</a></li>
+                            <li><a href="#" on:click={(e) => { loadFavourites(); selectedCategory = null; scrollToGrid(); favouritesSelected= true;}} class="hover:underline">Favourites</a></li>
+                            <li><a href="#" on:click={() => {profileCardSelected= true; profileStep = 'password'; showPassword = false; oldPassword = ''; newPassword = '';}} class="hover:underline">Change password</a></li>
                             <li><a href="#" on:click={() => { logout(); addToast('Logged out successfully', 'info'); location.reload();}} class="hover:underline">Log out</a></li>
                         {/if}
                     </ul>
