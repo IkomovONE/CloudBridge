@@ -39,7 +39,11 @@ func InitCognito() {
 		panic("missing COGNITO env vars")
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.Background())
+	// 🔥 IMPORTANT: set region explicitly, same as in main.go
+	cfg, err := config.LoadDefaultConfig(
+		context.Background(),
+		config.WithRegion("eu-north-1"),
+	)
 	if err != nil {
 		panic(err)
 	}
