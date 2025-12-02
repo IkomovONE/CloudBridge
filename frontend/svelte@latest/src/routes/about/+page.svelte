@@ -72,28 +72,40 @@
         <h1 class="about-title">About CloudBridge</h1>
 
         <p class="about-text">
-            CloudBridge is a modern deal-aggregator platform that gathers the best electronics
-            offers from Finland’s biggest retailers — Elisa, DNA, Telia, Jimm’s, Multitronic,
-            Verkkokauppa and many more.
+            CloudBridge is a modern deal-aggregator platform designed to help users discover the best 
+            electronics offers across Finland — from well-known retailers such as Elisa, DNA, Telia, 
+            Jimm’s, Multitronic, Verkkokauppa and more.  
+            The goal is simple: make it easier, faster and smarter for people to compare prices and 
+            find the right tech at the right moment.
         </p>
 
         <p class="about-text">
-            The platform is built using cutting-edge technologies:
+            CloudBridge is built as a full end-to-end cloud application using a clean, scalable, 
+            and production-oriented architecture:
         </p>
 
         <ul class="about-text" style="list-style: disc; padding-left: 20px;">
-            <li>Frontend — <strong>SvelteKit + TypeScript</strong></li>
-            <li>Backend — <strong>Golang + Gin API</strong></li>
-            <li>Database — <strong>AWS DynamoDB</strong></li>
-            <li>Authentication — <strong>AWS Cognito</strong></li>
-            <li>Scraper service — <strong>Python + BeautifulSoup</strong></li>
-            <li>Storage — <strong>AWS S3 (product images, store logos)</strong></li>
+            <li>Frontend — <strong>SvelteKit + TypeScript</strong> for a fast, reactive user experience</li>
+            <li>Backend — <strong>Golang + Gin</strong> API running on AWS EC2</li>
+            <li>Database — <strong>AWS DynamoDB</strong> for high-performance, serverless storage</li>
+            <li>Authentication — <strong>AWS Cognito</strong> with secure user management</li>
+            <li>File hosting — <strong>AWS S3</strong> for lightweight image and asset delivery</li>
+            <li>API gateway layer — <strong>AWS API Gateway</strong> providing HTTPS access to backend services</li>
         </ul>
 
         <p class="about-text">
-            CloudBridge was created as part of a Software Systems Architecture university project,
-            showcasing cloud infrastructure design, distributed components, secure APIs and modern
-            UI/UX principles.
+            While the current version focuses on fast browsing and deal discovery, 
+            CloudBridge is designed with extensibility in mind.  
+            A Python-based web-scraper (BeautifulSoup) is planned as a future enhancement to 
+            automate data collection from multiple retailer sources, further improving freshness and coverage.
+        </p>
+
+        <p class="about-text">
+            CloudBridge was created as part of a university Full-Stack Development project, 
+            demonstrating real-world skills in cloud infrastructure, distributed system design, 
+            secure APIs, and modern UI/UX development.  
+            The platform integrates multiple AWS services, CI/CD workflows, containerized components, 
+            and a fully deployed production pipeline.
         </p>
 
         <div class="about-highlight">
